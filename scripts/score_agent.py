@@ -1,15 +1,11 @@
 import os
 import sys
 from datetime import datetime, timedelta
-import psycopg2
 import requests
 
 # Configuration
-DB_PASSWORD = os.environ.get("SUPABASE_DB_PASSWORD")
-DB_HOST = "db.jffhhtbhecstgyhmiabn.supabase.co"
-DB_USER = "postgres"
-DB_PORT = "5432"
-DB_NAME = "postgres"
+SUPABASE_URL = "https://jffhhtbhecstgyhmiabn.supabase.co"
+SUPABASE_SERVICE_KEY = os.environ.get("SUPABASE_DB_PASSWORD") # We re-used the secret name
 
 def log(msg):
     print(f"[SCORE AGENT] {msg}", flush=True)
@@ -50,11 +46,11 @@ def calculate_excitement(home_score, away_score, is_ot):
     return round(score, 1), tags
 
 def run():
-    if not DB_PASSWORD:
-        log("ERROR: SUPABASE_DB_PASSWORD missing.")
+    if not SUPABASE_SERVICE_KEY:
+        log("ERROR: SUPABASE_DB_PASSWORD (Service Key) missing.")
         sys.exit(1)
         
-    # Fetch yesterday's games (ESPN format requires YYYYMMDD)
+    # Fetch yesterday's games
     yesterday_date = datetime.now() - timedelta(days=1)
     date_str = yesterday_date.strftime('%Y%m%d')
     db_date_str = yesterday_date.strftime('%Y-%m-%d')
@@ -75,15 +71,14 @@ def run():
         log("No games found for this date.")
         sys.exit(0)
         
-    log("Connecting to Supabase Database...")
-    conn_str = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
-    
-    try:
-        conn = psycopg2.connect(conn_str)
-        cur = conn.cursor()
-    except Exception as e:
-        log(f"Database connection failed: {e}")
-        sys.exit(1)
+    log("Connecting to Supabase REST API...")
+    supabase_api_url = f"{SUPABASE_URL}/rest/v1/nba_daily_ranks"
+    headers = {
+        "apikey": SUPABASE_SERVICE_KEY,
+        "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+        "Content-Type": "application/json",
+        "Prefer": "return=minimal"
+    }
     
     log(f"Processing {len(events)} games...")
     inserted_count = 0
@@ -116,35 +111,30 @@ def run():
                     away_team = team_abbr
                     away_score = score
             
-            # Use real calculation instead of dummy values
             excitement_score, tags = calculate_excitement(home_score, away_score, is_ot)
             final_score_str = f"{home_score}-{away_score}"
             
-            # Insert into database
-            insert_query = """
-            INSERT INTO nba_daily_ranks 
-            (date, home_team, away_team, excitement_score, tags, final_score, is_overtime, created_at, updated_at)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, NOW(), NOW())
-            """
-            cur.execute(insert_query, (
-                db_date_str,
-                home_team,
-                away_team,
-                excitement_score,
-                tags,
-                final_score_str,
-                is_ot
-            ))
+            payload = {
+                "date": db_date_str,
+                "home_team": home_team,
+                "away_team": away_team,
+                "excitement_score": excitement_score,
+                "tags": tags,
+                "final_score": final_score_str,
+                "is_overtime": is_ot
+            }
+            
+            # Insert into database using REST
+            res = requests.post(supabase_api_url, headers=headers, json=payload)
+            res.raise_for_status()
+            
             inserted_count += 1
-            log(f"Processed: {home_team} vs {away_team} | Score: {excitement_score}")
+            log(f"Inserted: {home_team} vs {away_team} | Score: {excitement_score}")
             
         except Exception as e:
             log(f"Error processing game {event.get('shortName')}: {e}")
             continue
             
-    conn.commit()
-    cur.close()
-    conn.close()
     log(f"Successfully inserted {inserted_count} games to database!")
 
 if __name__ == "__main__":
