@@ -1,0 +1,23 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# Dependencies
+node_modules
+
+# Build output
+dist
+
+# Environment variables (NEVER commit this)
+.env
+.env.local
+.env.production
+
+# OS
+.DS_Store
+
+# Editor
+.vscode
+.idea
+*.swp
