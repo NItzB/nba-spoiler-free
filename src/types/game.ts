@@ -10,6 +10,7 @@ export interface Game {
   highlights_url: string | null;
   full_game_url: string | null;
   game_time_utc: string | null;
+  status?: string;
   created_at?: string;
 }
 

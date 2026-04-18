@@ -72,10 +72,14 @@ def fetch_and_insert_for_date(target_date):
         try:
             competition = event['competitions'][0]
             status = competition['status']
+            status_type = status['type']['name']
             
-            # Skip games that aren't completed
-            if not status['type']['completed']:
+            # Types: STATUS_SCHEDULED, STATUS_IN_PROGRESS, STATUS_HALFTIME, STATUS_FINAL
+            if status_type == 'STATUS_SCHEDULED':
                 continue
+                
+            is_completed = status['type']['completed']
+            game_status = 'completed' if is_completed else 'in_progress'
                 
             period = status['period']
             is_ot = period > 4
@@ -96,8 +100,14 @@ def fetch_and_insert_for_date(target_date):
                     away_team = team_abbr
                     away_score = score
             
-            excitement_score, tags = calculate_excitement(home_score, away_score, is_ot)
-            final_score_str = f"{home_score}-{away_score}"
+            # Only compute real excitement if completed, otherwise 0
+            if game_status == 'completed':
+                excitement_score, tags = calculate_excitement(home_score, away_score, is_ot)
+                final_score_str = f"{home_score}-{away_score}"
+            else:
+                excitement_score = 0
+                tags = ['Live']
+                final_score_str = f"{home_score}-{away_score}"
             
             payload.append({
                 "date": db_date_str,
@@ -107,10 +117,11 @@ def fetch_and_insert_for_date(target_date):
                 "tags": tags,
                 "final_score": final_score_str,
                 "is_overtime": is_ot,
+                "status": game_status,
                 "created_at": datetime.now().isoformat(),
                 "updated_at": datetime.now().isoformat()
             })
-            log(f"Prepared: {away_team} @ {home_team} | Score: {excitement_score}")
+            log(f"Prepared: {away_team} @ {home_team} | Status: {game_status} | Score: {excitement_score}")
             
         except Exception as e:
             log(f"Error processing game {event.get('shortName')}: {e}")

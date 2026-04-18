@@ -61,6 +61,7 @@ export default function GameCard({ game, globalSpoilerVisible, rank }: GameCardP
   const showScore = globalSpoilerVisible || localSpoilerVisible
   const isSkip = tier === 'skip'
   const isMustWatch = tier === 'must-watch'
+  const isLive = game.status === 'in_progress'
   const israelTime = getIsraelTime(game.game_time_utc)
 
   return (
@@ -73,7 +74,9 @@ export default function GameCard({ game, globalSpoilerVisible, rank }: GameCardP
         group hover:scale-[1.01] hover:shadow-card-hover
       `}
       style={{
-        boxShadow: isMustWatch
+        boxShadow: isLive 
+          ? '0 0 0 1px rgba(239,68,68,0.4), 0 4px 24px rgba(0,0,0,0.4)'
+          : isMustWatch
           ? '0 0 0 1px rgba(255,107,53,0.4), 0 4px 24px rgba(0,0,0,0.4)'
           : tier === 'great'
           ? '0 0 0 1px rgba(74,158,255,0.3), 0 4px 24px rgba(0,0,0,0.4)'
@@ -90,9 +93,19 @@ export default function GameCard({ game, globalSpoilerVisible, rank }: GameCardP
       />
 
       {/* Rank badge */}
-      <div className="absolute top-3 left-3 flex items-center justify-center w-6 h-6 rounded-full bg-white/8 border border-white/10 text-[11px] font-bold text-slate-400">
-        #{rank}
-      </div>
+      {!isLive && (
+        <div className="absolute top-3 left-3 flex items-center justify-center w-6 h-6 rounded-full bg-white/8 border border-white/10 text-[11px] font-bold text-slate-400">
+          #{rank}
+        </div>
+      )}
+
+      {/* Live Badge Component */}
+      {isLive && (
+        <div className="absolute top-3 left-3 px-2 py-0.5 rounded-full bg-red-500/20 border border-red-500/40 text-red-400 text-[10px] font-bold uppercase tracking-widest animate-pulse flex items-center gap-1.5">
+          <div className="w-1.5 h-1.5 rounded-full bg-red-500 shadow-fire" />
+          LIVE
+        </div>
+      )}
 
       {/* OT badge */}
       {game.is_overtime && (
@@ -109,7 +122,13 @@ export default function GameCard({ game, globalSpoilerVisible, rank }: GameCardP
 
           {/* Center: score/time + excitement */}
           <div className="flex flex-col items-center gap-2 flex-1 min-w-0">
-            <ExcitementBadge score={game.excitement_score} size="lg" />
+            {isLive ? (
+              <div className="text-sm font-black text-white px-3 py-1 bg-red-500/20 rounded-xl border border-red-500/30 whitespace-nowrap">
+                IN PROGRESS
+              </div>
+            ) : (
+              <ExcitementBadge score={game.excitement_score} size="lg" />
+            )}
 
             {/* Game time */}
             <div className="text-center">
@@ -150,7 +169,15 @@ export default function GameCard({ game, globalSpoilerVisible, rank }: GameCardP
         <div className="flex items-center justify-between gap-2 mt-2">
           {/* Score reveal */}
           <div className="flex items-center gap-2">
-            {game.final_score && !globalSpoilerVisible && (
+            {isLive ? (
+              <button
+                id={`score-hidden-${game.id}`}
+                disabled
+                className="btn-reveal bg-red-500/10 text-red-300 border border-red-500/20 opacity-80 cursor-not-allowed"
+              >
+                🔒 In Progress
+              </button>
+            ) : game.final_score && !globalSpoilerVisible ? (
               <button
                 id={`reveal-score-${game.id}`}
                 onClick={() => setLocalSpoilerVisible(v => !v)}
@@ -158,7 +185,7 @@ export default function GameCard({ game, globalSpoilerVisible, rank }: GameCardP
               >
                 {localSpoilerVisible ? '🙈 Hide' : '👁️ Score'}
               </button>
-            )}
+            ) : null}
 
             {game.final_score && (
               <div
