@@ -46,17 +46,11 @@ def calculate_excitement(home_score, away_score, is_ot):
     score = max(0.0, min(10.0, score))
     return round(score, 1), tags
 
-def run():
-    if not SERVICE_ROLE_KEY:
-        log("ERROR: SUPABASE_DB_PASSWORD (holding the service role key) missing.")
-        sys.exit(1)
-        
-    # Fetch yesterday's games (ESPN format requires YYYYMMDD)
-    yesterday_date = datetime.now() - timedelta(days=1)
-    date_str = yesterday_date.strftime('%Y%m%d')
-    db_date_str = yesterday_date.strftime('%Y-%m-%d')
+def fetch_and_insert_for_date(target_date):
+    date_str = target_date.strftime('%Y%m%d')
+    db_date_str = target_date.strftime('%Y-%m-%d')
     
-    log(f"Fetching games for {date_str} from ESPN API...")
+    log(f"--- Processing Date: {db_date_str} ---")
     url = f"https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates={date_str}"
     
     try:
@@ -65,16 +59,13 @@ def run():
         data = response.json()
     except Exception as e:
         log(f"Failed to fetch data from ESPN: {e}")
-        sys.exit(1)
+        return
         
     events = data.get('events', [])
     if not events:
         log("No games found for this date.")
-        sys.exit(0)
+        return
     
-    log(f"Processing {len(events)} games...")
-    
-    # Prepare payload for Supabase REST API
     payload = []
     
     for event in events:
@@ -108,7 +99,6 @@ def run():
             excitement_score, tags = calculate_excitement(home_score, away_score, is_ot)
             final_score_str = f"{home_score}-{away_score}"
             
-            # Append to payload
             payload.append({
                 "date": db_date_str,
                 "home_team": home_team,
@@ -120,20 +110,19 @@ def run():
                 "created_at": datetime.now().isoformat(),
                 "updated_at": datetime.now().isoformat()
             })
-            
-            log(f"Prepared: {home_team} vs {away_team} | Score: {excitement_score}")
+            log(f"Prepared: {away_team} @ {home_team} | Score: {excitement_score}")
             
         except Exception as e:
             log(f"Error processing game {event.get('shortName')}: {e}")
             continue
 
     if not payload:
-        log("No completed games to insert.")
-        sys.exit(0)
+        log("No completed games to insert right now.")
+        return
 
-    # Insert into database using Supabase REST API
-    log("Inserting into Supabase via REST API...")
+    # Delete existing records for this date to prevent duplicates (Idempotent update)
     rest_url = f"{SUPABASE_URL}/rest/v1/nba_daily_ranks"
+    delete_url = f"{rest_url}?date=eq.{db_date_str}"
     headers = {
         "apikey": SERVICE_ROLE_KEY,
         "Authorization": f"Bearer {SERVICE_ROLE_KEY}",
@@ -142,14 +131,32 @@ def run():
     }
 
     try:
+        # 1. Delete old
+        requests.delete(delete_url, headers=headers, timeout=15)
+        # 2. Insert new
         response = requests.post(rest_url, headers=headers, json=payload, timeout=15)
         response.raise_for_status()
-        log(f"Successfully inserted {len(payload)} games to database!")
+        log(f"Successfully inserted/updated {len(payload)} games for {db_date_str}!")
     except Exception as e:
-        log(f"Failed to insert into Supabase: {e}")
+        log(f"Failed to update database: {e}")
         if hasattr(e, 'response') and e.response is not None:
              log(f"Response: {e.response.text}")
+
+def run():
+    if not SERVICE_ROLE_KEY:
+        log("ERROR: SUPABASE_DB_PASSWORD (holding the service role key) missing.")
         sys.exit(1)
+        
+    utc_now = datetime.now()
+    
+    # We will check both Today and Yesterday to ensure we catch everything
+    dates_to_check = [
+        utc_now - timedelta(days=1), # Yesterday
+        utc_now                      # Today
+    ]
+    
+    for d in dates_to_check:
+        fetch_and_insert_for_date(d)
 
 if __name__ == "__main__":
     run()
