@@ -104,6 +104,9 @@ def fetch_and_insert_for_date(target_date):
                     away_team = team_abbr
                     away_score = score
             
+            notes = competition.get('notes', [])
+            game_note = notes[0].get('headline') if notes else None
+            
             # Only compute real excitement if completed, otherwise 0
             if game_status == 'completed':
                 excitement_score, tags = calculate_excitement(home_score, away_score, is_ot)
@@ -116,6 +119,9 @@ def fetch_and_insert_for_date(target_date):
                 excitement_score = 0
                 tags = ['Upcoming']
                 final_score_str = None
+                
+            if game_note:
+                tags.append(game_note)
             
             payload.append({
                 "date": db_date_str,

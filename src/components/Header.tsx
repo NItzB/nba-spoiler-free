@@ -17,7 +17,6 @@ export default function Header({
   isUsingMockData,
 }: HeaderProps) {
   const today = format(new Date(), 'yyyy-MM-dd')
-  const maxDate = today
 
   const handlePrevDay = () => {
     const d = new Date(selectedDate + 'T12:00:00')
@@ -28,8 +27,7 @@ export default function Header({
   const handleNextDay = () => {
     const d = new Date(selectedDate + 'T12:00:00')
     d.setDate(d.getDate() + 1)
-    const next = format(d, 'yyyy-MM-dd')
-    if (next <= today) onDateChange(next)
+    onDateChange(format(d, 'yyyy-MM-dd'))
   }
 
 
@@ -78,7 +76,6 @@ export default function Header({
               id="date-picker"
               type="date"
               value={selectedDate}
-              max={maxDate}
               onChange={e => onDateChange(e.target.value)}
               className="
                 bg-white/8 border border-white/15 text-slate-200 text-sm font-medium
@@ -87,18 +84,24 @@ export default function Header({
                 [color-scheme:dark] focus:outline-none focus:ring-2 focus:ring-orange-500/50
               "
             />
-            {isToday && (
+            {isToday ? (
               <span className="px-2 py-1 rounded-md bg-orange-500/20 border border-orange-400/30 text-orange-300 text-[11px] font-bold uppercase tracking-wider">
                 Today
               </span>
+            ) : (
+              <button
+                onClick={() => onDateChange(today)}
+                className="px-2 py-1 rounded-md bg-white/5 border border-white/10 hover:bg-white/10 text-slate-300 hover:text-white text-[11px] font-bold uppercase tracking-wider transition-all"
+              >
+                Today
+              </button>
             )}
           </div>
 
           <button
             id="next-day-btn"
             onClick={handleNextDay}
-            disabled={selectedDate >= today}
-            className="flex items-center justify-center w-8 h-8 rounded-lg bg-white/8 hover:bg-white/15 border border-white/10 hover:border-white/20 transition-all duration-200 text-slate-300 hover:text-white active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-white/8"
+            className="flex items-center justify-center w-8 h-8 rounded-lg bg-white/8 hover:bg-white/15 border border-white/10 hover:border-white/20 transition-all duration-200 text-slate-300 hover:text-white active:scale-95"
             title="Next day"
           >
             ›
