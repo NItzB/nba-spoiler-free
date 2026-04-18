@@ -1,4 +1,3 @@
-import React from 'react'
 import { ExcitementTier } from '../types/game'
 
 interface ExcitementBadgeProps {

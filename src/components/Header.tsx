@@ -1,4 +1,3 @@
-import React from 'react'
 import { format } from 'date-fns'
 import SpoilerToggle from './SpoilerToggle'
 
@@ -33,7 +32,7 @@ export default function Header({
     if (next <= today) onDateChange(next)
   }
 
-  const displayDate = new Date(selectedDate + 'T12:00:00')
+
   const isToday = selectedDate === today
 
   return (

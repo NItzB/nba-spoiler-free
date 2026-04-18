@@ -1,14 +1,12 @@
 import React, { useState } from 'react'
 import * as NBAIcons from 'react-nba-logos'
 import { format, parseISO } from 'date-fns'
-import { toZonedTime } from 'date-fns-tz'
 import { Game } from '../types/game'
 import { getTeam, getTagInfo } from '../lib/teams'
 import ExcitementBadge, { getExcitementTier, TIER_CONFIG } from './ExcitementBadge'
 
 // Israel Standard Time / Daylight Time is UTC+2 / UTC+3
 // We'll dynamically compute it, but use a fixed offset for simplicity
-const ISRAEL_TZ = 'Asia/Jerusalem'
 
 interface GameCardProps {
   game: Game
