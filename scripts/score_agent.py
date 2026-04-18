@@ -1,11 +1,12 @@
 import os
 import sys
+import json
 from datetime import datetime, timedelta
 import requests
 
 # Configuration
+SERVICE_ROLE_KEY = os.environ.get("SUPABASE_DB_PASSWORD") # user reused the same secret name
 SUPABASE_URL = "https://jffhhtbhecstgyhmiabn.supabase.co"
-SUPABASE_SERVICE_KEY = os.environ.get("SUPABASE_DB_PASSWORD") # We re-used the secret name
 
 def log(msg):
     print(f"[SCORE AGENT] {msg}", flush=True)
@@ -46,11 +47,11 @@ def calculate_excitement(home_score, away_score, is_ot):
     return round(score, 1), tags
 
 def run():
-    if not SUPABASE_SERVICE_KEY:
-        log("ERROR: SUPABASE_DB_PASSWORD (Service Key) missing.")
+    if not SERVICE_ROLE_KEY:
+        log("ERROR: SUPABASE_DB_PASSWORD (holding the service role key) missing.")
         sys.exit(1)
         
-    # Fetch yesterday's games
+    # Fetch yesterday's games (ESPN format requires YYYYMMDD)
     yesterday_date = datetime.now() - timedelta(days=1)
     date_str = yesterday_date.strftime('%Y%m%d')
     db_date_str = yesterday_date.strftime('%Y-%m-%d')
@@ -70,18 +71,11 @@ def run():
     if not events:
         log("No games found for this date.")
         sys.exit(0)
-        
-    log("Connecting to Supabase REST API...")
-    supabase_api_url = f"{SUPABASE_URL}/rest/v1/nba_daily_ranks"
-    headers = {
-        "apikey": SUPABASE_SERVICE_KEY,
-        "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
-        "Content-Type": "application/json",
-        "Prefer": "return=minimal"
-    }
     
     log(f"Processing {len(events)} games...")
-    inserted_count = 0
+    
+    # Prepare payload for Supabase REST API
+    payload = []
     
     for event in events:
         try:
@@ -114,28 +108,48 @@ def run():
             excitement_score, tags = calculate_excitement(home_score, away_score, is_ot)
             final_score_str = f"{home_score}-{away_score}"
             
-            payload = {
+            # Append to payload
+            payload.append({
                 "date": db_date_str,
                 "home_team": home_team,
                 "away_team": away_team,
                 "excitement_score": excitement_score,
                 "tags": tags,
                 "final_score": final_score_str,
-                "is_overtime": is_ot
-            }
+                "is_overtime": is_ot,
+                "created_at": datetime.now().isoformat(),
+                "updated_at": datetime.now().isoformat()
+            })
             
-            # Insert into database using REST
-            res = requests.post(supabase_api_url, headers=headers, json=payload)
-            res.raise_for_status()
-            
-            inserted_count += 1
-            log(f"Inserted: {home_team} vs {away_team} | Score: {excitement_score}")
+            log(f"Prepared: {home_team} vs {away_team} | Score: {excitement_score}")
             
         except Exception as e:
             log(f"Error processing game {event.get('shortName')}: {e}")
             continue
-            
-    log(f"Successfully inserted {inserted_count} games to database!")
+
+    if not payload:
+        log("No completed games to insert.")
+        sys.exit(0)
+
+    # Insert into database using Supabase REST API
+    log("Inserting into Supabase via REST API...")
+    rest_url = f"{SUPABASE_URL}/rest/v1/nba_daily_ranks"
+    headers = {
+        "apikey": SERVICE_ROLE_KEY,
+        "Authorization": f"Bearer {SERVICE_ROLE_KEY}",
+        "Content-Type": "application/json",
+        "Prefer": "return=minimal"
+    }
+
+    try:
+        response = requests.post(rest_url, headers=headers, json=payload, timeout=15)
+        response.raise_for_status()
+        log(f"Successfully inserted {len(payload)} games to database!")
+    except Exception as e:
+        log(f"Failed to insert into Supabase: {e}")
+        if hasattr(e, 'response') and e.response is not None:
+             log(f"Response: {e.response.text}")
+        sys.exit(1)
 
 if __name__ == "__main__":
     run()
