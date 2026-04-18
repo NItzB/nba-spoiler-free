@@ -116,7 +116,7 @@ export function useGames(date: string): UseGamesResult {
         if (!cancelled) {
           const today = format(new Date(), 'yyyy-MM-dd')
           const filteredMock = date === today ? MOCK_GAMES : []
-          setGames(filteredMock.sort((a, b) => b.excitement_score - a.excitement_score))
+          setGames(filteredMock)
           setIsUsingMockData(true)
           setLoading(false)
         }
@@ -128,11 +128,28 @@ export function useGames(date: string): UseGamesResult {
           .from('nba_daily_ranks')
           .select('*')
           .eq('date', date)
-          .order('excitement_score', { ascending: false })
 
         if (!cancelled) {
           if (supabaseError) throw supabaseError
-          setGames(data || [])
+          
+          const sorted = (data || []).sort((a, b) => {
+            // 1. Scheduled / Live games go to the top
+            const aActive = a.status === 'scheduled' || a.status === 'in_progress'
+            const bActive = b.status === 'scheduled' || b.status === 'in_progress'
+            
+            if (aActive && !bActive) return -1
+            if (!aActive && bActive) return 1
+            
+            // 2. If both are active, sort chronologically (earliest first)
+            if (aActive && bActive) {
+              return (a.game_time_utc || '').localeCompare(b.game_time_utc || '')
+            }
+            
+            // 3. If both completed, sort by excitement score (highest first)
+            return b.excitement_score - a.excitement_score
+          })
+          
+          setGames(sorted)
           setIsUsingMockData(false)
         }
       } catch (err) {
@@ -142,7 +159,7 @@ export function useGames(date: string): UseGamesResult {
           // Fall back to mock data
           const today = format(new Date(), 'yyyy-MM-dd')
           const filteredMock = date === today ? MOCK_GAMES : []
-          setGames(filteredMock.sort((a, b) => b.excitement_score - a.excitement_score))
+          setGames(filteredMock)
           setIsUsingMockData(true)
         }
       } finally {

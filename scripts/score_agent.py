@@ -74,14 +74,17 @@ def fetch_and_insert_for_date(target_date):
             status = competition['status']
             status_type = status['type']['name']
             
+            game_time_utc = event.get('date') # ISO timestamp of game start
+            
             # Types: STATUS_SCHEDULED, STATUS_IN_PROGRESS, STATUS_HALFTIME, STATUS_FINAL
             if status_type == 'STATUS_SCHEDULED':
-                continue
+                is_completed = False
+                game_status = 'scheduled'
+            else:
+                is_completed = status['type']['completed']
+                game_status = 'completed' if is_completed else 'in_progress'
                 
-            is_completed = status['type']['completed']
-            game_status = 'completed' if is_completed else 'in_progress'
-                
-            period = status['period']
+            period = status.get('period', 0)
             is_ot = period > 4
             
             home_team = None
@@ -91,7 +94,8 @@ def fetch_and_insert_for_date(target_date):
             
             for competitor in competition['competitors']:
                 team_abbr = competitor['team']['abbreviation']
-                score = int(competitor['score'])
+                score_str = competitor.get('score', '0')
+                score = int(score_str) if score_str else 0
                 
                 if competitor['homeAway'] == 'home':
                     home_team = team_abbr
@@ -104,10 +108,14 @@ def fetch_and_insert_for_date(target_date):
             if game_status == 'completed':
                 excitement_score, tags = calculate_excitement(home_score, away_score, is_ot)
                 final_score_str = f"{home_score}-{away_score}"
-            else:
+            elif game_status == 'in_progress':
                 excitement_score = 0
                 tags = ['Live']
                 final_score_str = f"{home_score}-{away_score}"
+            else:
+                excitement_score = 0
+                tags = ['Upcoming']
+                final_score_str = None
             
             payload.append({
                 "date": db_date_str,
@@ -116,6 +124,7 @@ def fetch_and_insert_for_date(target_date):
                 "excitement_score": excitement_score,
                 "tags": tags,
                 "final_score": final_score_str,
+                "game_time_utc": game_time_utc,
                 "is_overtime": is_ot,
                 "status": game_status,
                 "created_at": datetime.now().isoformat(),

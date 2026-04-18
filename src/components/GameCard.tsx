@@ -59,9 +59,10 @@ export default function GameCard({ game, globalSpoilerVisible, rank }: GameCardP
   const tier = getExcitementTier(game.excitement_score)
   const tierConfig = TIER_CONFIG[tier]
   const showScore = globalSpoilerVisible || localSpoilerVisible
-  const isSkip = tier === 'skip'
-  const isMustWatch = tier === 'must-watch'
   const isLive = game.status === 'in_progress'
+  const isScheduled = game.status === 'scheduled'
+  const isSkip = tier === 'skip' && !isLive && !isScheduled
+  const isMustWatch = tier === 'must-watch'
   const israelTime = getIsraelTime(game.game_time_utc)
 
   return (
@@ -93,7 +94,7 @@ export default function GameCard({ game, globalSpoilerVisible, rank }: GameCardP
       />
 
       {/* Rank badge */}
-      {!isLive && (
+      {!isLive && !isScheduled && (
         <div className="absolute top-3 left-3 flex items-center justify-center w-6 h-6 rounded-full bg-white/8 border border-white/10 text-[11px] font-bold text-slate-400">
           #{rank}
         </div>
@@ -125,6 +126,10 @@ export default function GameCard({ game, globalSpoilerVisible, rank }: GameCardP
             {isLive ? (
               <div className="text-sm font-black text-white px-3 py-1 bg-red-500/20 rounded-xl border border-red-500/30 whitespace-nowrap">
                 IN PROGRESS
+              </div>
+            ) : isScheduled ? (
+              <div className="text-sm font-black text-amber-200 px-3 py-1 bg-amber-500/20 rounded-xl border border-amber-500/30 whitespace-nowrap">
+                UPCOMING
               </div>
             ) : (
               <ExcitementBadge score={game.excitement_score} size="lg" />
@@ -176,6 +181,14 @@ export default function GameCard({ game, globalSpoilerVisible, rank }: GameCardP
                 className="btn-reveal bg-red-500/10 text-red-300 border border-red-500/20 opacity-80 cursor-not-allowed"
               >
                 🔒 In Progress
+              </button>
+            ) : isScheduled ? (
+              <button
+                id={`score-scheduled-${game.id}`}
+                disabled
+                className="btn-reveal bg-amber-500/10 text-amber-200 border border-amber-500/20 opacity-80 cursor-not-allowed"
+              >
+                🗓️ Scheduled
               </button>
             ) : game.final_score && !globalSpoilerVisible ? (
               <button
