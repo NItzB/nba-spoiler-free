@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import * as NBAIcons from 'react-nba-logos'
-import { format, parseISO } from 'date-fns'
+import { parseISO } from 'date-fns'
 import { Game } from '../types/game'
 import { getTeam, getTagInfo } from '../lib/teams'
 import ExcitementBadge, { getExcitementTier, TIER_CONFIG } from './ExcitementBadge'
@@ -18,10 +18,12 @@ function getIsraelTime(utcString: string | null): string {
   if (!utcString) return 'TBD'
   try {
     const date = parseISO(utcString)
-    // Convert to Israel time (+3 during DST, +2 standard)
-    const offset = 3 // IDT (Israel Daylight Time — April in Israel)
-    const israelDate = new Date(date.getTime() + offset * 60 * 60 * 1000)
-    return format(israelDate, 'HH:mm') + ' IL'
+    return date.toLocaleTimeString('en-US', {
+      timeZone: 'Asia/Jerusalem',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    }) + ' IL'
   } catch {
     return 'TBD'
   }
@@ -203,11 +205,18 @@ export default function GameCard({ game, globalSpoilerVisible, rank }: GameCardP
             {game.final_score && (
               <div
                 className={`
-                  text-lg font-black tracking-wide text-white
-                  ${showScore ? 'spoiler-reveal' : 'spoiler-blur pointer-events-none select-none'}
+                  flex flex-col items-start justify-center
+                  ${showScore ? 'spoiler-reveal' : 'spoiler-blur pointer-events-none select-none text-transparent'}
                 `}
               >
-                {game.final_score}
+                <div className="text-lg font-black tracking-wide text-white leading-none">
+                  {game.final_score}
+                </div>
+                {game.series_summary && (
+                  <div className="text-[10px] font-bold text-slate-300 mt-1 uppercase tracking-wider bg-white/10 px-1.5 py-0.5 rounded">
+                    {game.series_summary}
+                  </div>
+                )}
               </div>
             )}
           </div>

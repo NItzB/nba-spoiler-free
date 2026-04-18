@@ -11,6 +11,7 @@ export interface Game {
   full_game_url: string | null;
   game_time_utc: string | null;
   status?: string;
+  series_summary?: string | null;
   created_at?: string;
 }
 

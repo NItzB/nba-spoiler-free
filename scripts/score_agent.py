@@ -122,6 +122,11 @@ def fetch_and_insert_for_date(target_date):
                 
             if game_note:
                 tags.append(game_note)
+                
+            series_summary = None
+            series_info = competition.get('series')
+            if series_info and 'summary' in series_info:
+                series_summary = series_info['summary']
             
             payload.append({
                 "date": db_date_str,
@@ -133,6 +138,7 @@ def fetch_and_insert_for_date(target_date):
                 "game_time_utc": game_time_utc,
                 "is_overtime": is_ot,
                 "status": game_status,
+                "series_summary": series_summary,
                 "created_at": datetime.now().isoformat(),
                 "updated_at": datetime.now().isoformat()
             })
