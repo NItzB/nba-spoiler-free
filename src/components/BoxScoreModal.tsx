@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { getTeam } from '../lib/teams';
 import * as NBAIcons from 'react-nba-logos';
 

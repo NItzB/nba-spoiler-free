@@ -235,7 +235,6 @@ def fetch_and_insert_for_date(target_date):
                 boxscore_data = fetch_boxscore(event.get('id'))
 
             payload.append({
-                "id": event.get('id'),
                 "date": db_date_str,
                 "home_team": home_team,
                 "away_team": away_team,
