@@ -158,7 +158,7 @@ export default function GameCard({ game, globalSpoilerVisible, rank }: GameCardP
         {/* Tags */}
         {game.tags && game.tags.length > 0 && (
           <div className="flex flex-wrap gap-1.5 mb-3">
-            {game.tags.map(tag => {
+            {game.tags.filter(t => t !== 'Upcoming' && t !== 'Live').map(tag => {
               const tagInfo = getTagInfo(tag)
               return (
                 <span
@@ -182,23 +182,7 @@ export default function GameCard({ game, globalSpoilerVisible, rank }: GameCardP
         <div className="flex items-center justify-between gap-2 mt-2">
           {/* Score reveal */}
           <div className="flex items-center gap-2">
-            {isLive ? (
-              <button
-                id={`score-hidden-${game.id}`}
-                disabled
-                className="btn-reveal bg-red-500/10 text-red-300 border border-red-500/20 opacity-80 cursor-not-allowed"
-              >
-                🔒 In Progress
-              </button>
-            ) : isScheduled ? (
-              <button
-                id={`score-scheduled-${game.id}`}
-                disabled
-                className="btn-reveal bg-amber-500/10 text-amber-200 border border-amber-500/20 opacity-80 cursor-not-allowed"
-              >
-                🗓️ Scheduled
-              </button>
-            ) : game.final_score && !globalSpoilerVisible ? (
+            {game.final_score && !globalSpoilerVisible ? (
               <button
                 id={`reveal-score-${game.id}`}
                 onClick={() => setLocalSpoilerVisible(v => !v)}

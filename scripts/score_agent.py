@@ -59,7 +59,7 @@ def fetch_boxscore(game_id):
         log(f"Error fetching boxscore for {game_id}: {e}")
         return None
 
-def calculate_excitement(home_score, away_score, is_ot):
+def calculate_excitement(home_score, away_score, is_ot, leaders=None):
     margin = abs(home_score - away_score)
     total_score = home_score + away_score
     
@@ -78,17 +78,35 @@ def calculate_excitement(home_score, away_score, is_ot):
     elif margin <= 5:
         score += 1.0
         tags.append("Close Game")
-    elif margin >= 20:
-        score -= 2.0
+    elif margin >= 25:
+        score -= 2.5
         tags.append("Blowout")
+    elif margin >= 15:
+        score -= 1.0
         
     # High scoring logic
-    if total_score >= 240:
-        score += 0.5
+    if total_score >= 245:
+        score += 1.0
         tags.append("High Scoring")
-    elif total_score <= 180:
+    elif total_score >= 230:
+        score += 0.5
+    elif total_score <= 185:
         score -= 1.0
         tags.append("Defensive Battle")
+        
+    # Star Performance
+    if leaders:
+        for leader in leaders:
+            stat_val = leader.get('stat', '0')
+            try:
+                # Convert "42 PTS" or just "42" to int
+                pts = int(stat_val.split()[0])
+                if pts >= 40:
+                    score += 0.5
+                    if "Star Performance" not in tags:
+                        tags.append("Star Performance")
+            except:
+                pass
         
     # Cap score
     score = max(0.0, min(10.0, score))
@@ -233,6 +251,20 @@ def fetch_and_insert_for_date(target_date):
             if game_status in ['in_progress', 'completed']:
                 log(f"Fetching boxscore for {event.get('id')}...")
                 boxscore_data = fetch_boxscore(event.get('id'))
+
+            # Re-calculating excitement with leaders if completed
+            if game_status == 'completed':
+                excitement_score, tags = calculate_excitement(home_score, away_score, is_ot, [home_leaders, away_leaders])
+            
+            # Clean up duplicate status tags for UI
+            if game_status == 'in_progress' and 'Live' not in tags:
+                tags.append('Live')
+            elif game_status == 'scheduled' and 'Upcoming' not in tags:
+                tags.append('Upcoming')
+
+            # Add context tags from ESPN notes/headlines if interesting
+            if game_note and "Game" not in game_note: # Filter out generic "Game 1"
+                if game_note not in tags: tags.append(game_note)
 
             payload.append({
                 "date": db_date_str,

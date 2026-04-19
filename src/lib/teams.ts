@@ -40,10 +40,7 @@ export const TAGS: Record<string, TagInfo> = {
   'OT': { label: 'OT', icon: '⏱️', color: '#a78bfa', bgColor: 'rgba(167,139,250,0.15)' },
   'Blowout': { label: 'Blowout', icon: '💨', color: '#64748b', bgColor: 'rgba(100,116,139,0.15)' },
   'Rivalry': { label: 'Rivalry', icon: '🔥', color: '#f97316', bgColor: 'rgba(249,115,22,0.15)' },
-  'Historic Performance': { label: 'Historic', icon: '⭐', color: '#facc15', bgColor: 'rgba(250,204,21,0.15)' },
-  'Close Game': { label: 'Close Game', icon: '📍', color: '#4a9eff', bgColor: 'rgba(74,158,255,0.15)' },
-  'Comeback': { label: 'Comeback', icon: '📈', color: '#34d399', bgColor: 'rgba(52,211,153,0.15)' },
-  'Playoff Implications': { label: 'Playoff Race', icon: '🏆', color: '#f59e0b', bgColor: 'rgba(245,158,11,0.15)' },
+  'Star Performance': { label: 'Star Player', icon: '⭐', color: '#facc15', bgColor: 'rgba(250,204,21,0.15)' },
   'Live': { label: 'Live Action', icon: '🔴', color: '#ef4444', bgColor: 'rgba(239,68,68,0.15)' },
   'Upcoming': { label: 'Scheduled', icon: '🗓️', color: '#fcd34d', bgColor: 'rgba(252,211,77,0.15)' }
 };
