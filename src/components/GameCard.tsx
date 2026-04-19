@@ -170,9 +170,6 @@ export default function GameCard({ game, globalSpoilerVisible, rank }: GameCardP
         <div className="border-t border-white/5 mb-3" />
 
         {/* Tags */}
-        <div className="text-[8px] text-slate-800 font-mono mb-1">
-          DB Tags: {JSON.stringify(game.tags)} | Updated: {game.updated_at || 'Never'}
-        </div>
         {processedTags && processedTags.length > 0 && (
           <div className="flex flex-wrap gap-1.5 mb-3">
             {processedTags.map(tag => {

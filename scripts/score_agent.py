@@ -71,42 +71,53 @@ def calculate_excitement(home_score, away_score, is_ot, leaders=None):
         score += 1.5
         tags.append("OT")
         
-    # Margin logic
+    # 1. Margin-based excitement (0.0 to 3.0)
+    # Very Close (<= 3 pts) -> +2.5
+    # Close (<= 8 pts) -> +1.5
+    # Decent (<= 12 pts) -> +0.5
     if margin <= 3:
-        score += 2.0
+        score += 2.5
         tags.append("Clutch Ending")
-    elif margin <= 5:
-        score += 1.0
+    elif margin <= 8:
+        score += 1.5
         tags.append("Close Game")
-    elif margin >= 25:
-        score -= 2.5
-        tags.append("Blowout")
-    elif margin >= 15:
-        score -= 1.0
-        
-    # High scoring logic
-    if total_score >= 245:
-        score += 1.0
-        tags.append("High Scoring")
-    elif total_score >= 230:
+    elif margin <= 12:
         score += 0.5
-    elif total_score <= 185:
-        score -= 1.0
+
+    # 2. Score intensity (0.0 to 1.5)
+    total_score = home_score + away_score
+    if total_score >= 235:
+        score += 1.5
+        tags.append("High Scoring")
+    elif total_score >= 220:
+        score += 0.8
+        tags.append("High Scoring")
+    elif total_score <= 185 and total_score > 0:
+        # Defensive battles can be exciting too
+        score += 1.0
         tags.append("Defensive Battle")
-        
-    # Star Performance
+
+    # 3. Individual performances (0.0 to 2.0)
     if leaders:
-        for leader in leaders:
-            stat_val = leader.get('stat', '0')
-            try:
-                # Convert "42 PTS" or just "42" to int
-                pts = int(stat_val.split()[0])
-                if pts >= 40:
-                    score += 0.5
-                    if "Star Performance" not in tags:
-                        tags.append("Star Performance")
-            except:
-                pass
+        max_pts = 0
+        for leader_group in leaders:
+            if leader_group and 'stat' in leader_group:
+                try:
+                    pts = int(leader_group['stat'].split()[0])
+                    max_pts = max(max_pts, pts)
+                except:
+                    pass
+        
+        if max_pts >= 45:
+            score += 2.0
+            tags.append("Star Performance")
+        elif max_pts >= 35:
+            score += 1.0
+            tags.append("Star Performance")
+        elif max_pts >= 30:
+            score += 0.5
+            tags.append("Top Performer")
+            tags.append("Star Performance")
         
     # Cap score
     score = max(0.0, min(10.0, score))

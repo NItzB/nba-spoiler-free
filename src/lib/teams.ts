@@ -37,6 +37,8 @@ export const TAGS: Record<string, TagInfo> = {
   'High Scoring': { label: 'High Scoring', icon: '🏀', color: '#fbbf24', bgColor: 'rgba(251,191,36,0.15)' },
   'Defensive Battle': { label: 'Defensive Battle', icon: '🛡️', color: '#94a3b8', bgColor: 'rgba(148,163,184,0.15)' },
   'Clutch Ending': { label: 'Clutch Ending', icon: '⚡', color: '#ff6b35', bgColor: 'rgba(255,107,53,0.15)' },
+  'Close Game': { label: 'Close Game', icon: '🤝', color: '#3b82f6', bgColor: 'rgba(59,130,246,0.15)' },
+  'Playoff Intensity': { label: 'Playoff Intensity', icon: '🏆', color: '#dc2626', bgColor: 'rgba(220,38,38,0.15)' },
   'OT': { label: 'OT', icon: '⏱️', color: '#a78bfa', bgColor: 'rgba(167,139,250,0.15)' },
   'Blowout': { label: 'Blowout', icon: '💨', color: '#64748b', bgColor: 'rgba(100,116,139,0.15)' },
   'Rivalry': { label: 'Rivalry', icon: '🔥', color: '#f97316', bgColor: 'rgba(249,115,22,0.15)' },
