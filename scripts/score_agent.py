@@ -173,14 +173,12 @@ def fetch_and_insert_for_date(target_date):
             notes = competition.get('notes', [])
             game_note = notes[0].get('headline') if notes else None
             
-            # Only compute real excitement if completed, otherwise 0
-            if game_status == 'completed':
+            # Compute excitement and tags for completed AND live games
+            if game_status in ['completed', 'in_progress']:
                 excitement_score, tags = calculate_excitement(home_score, away_score, is_ot)
                 final_score_str = f"{home_score}-{away_score}"
-            elif game_status == 'in_progress':
-                excitement_score = 0
-                tags = ['Live']
-                final_score_str = f"{home_score}-{away_score}"
+                if game_status == 'in_progress' and 'Live' not in tags:
+                    tags.append('Live')
             else:
                 excitement_score = 0
                 tags = ['Upcoming']
@@ -262,9 +260,10 @@ def fetch_and_insert_for_date(target_date):
             elif game_status == 'scheduled' and 'Upcoming' not in tags:
                 tags.append('Upcoming')
 
-            # Add context tags from ESPN notes/headlines if interesting
-            if game_note and "Game" not in game_note: # Filter out generic "Game 1"
-                if game_note not in tags: tags.append(game_note)
+            # Add context tags from ESPN notes/headlines (e.g., "Game 7", "Play-In")
+            if game_note:
+                if game_note not in tags: 
+                    tags.append(game_note)
 
             payload.append({
                 "date": db_date_str,

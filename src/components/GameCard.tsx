@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import * as NBAIcons from 'react-nba-logos'
 import { parseISO } from 'date-fns'
 import { Game } from '../types/game'
@@ -69,6 +69,20 @@ export default function GameCard({ game, globalSpoilerVisible, rank }: GameCardP
   const showScore = globalSpoilerVisible || localSpoilerVisible
   const isLive = game.status === 'in_progress'
   const isScheduled = game.status === 'scheduled'
+
+  // Defensive tag parsing
+  let processedTags: string[] = []
+  try {
+    processedTags = Array.isArray(game.tags) ? game.tags : JSON.parse(game.tags || '[]')
+  } catch {
+    processedTags = []
+  }
+
+  useEffect(() => {
+    if (game.home_team === 'NY' || game.home_team === 'SA') {
+      console.log(`[DEBUG] Game ${game.id} tags:`, game.tags);
+    }
+  }, [game]);
   const isSkip = tier === 'skip' && !isLive && !isScheduled
   const isMustWatch = tier === 'must-watch'
   const israelTime = getIsraelTime(game.game_time_utc)
@@ -156,9 +170,12 @@ export default function GameCard({ game, globalSpoilerVisible, rank }: GameCardP
         <div className="border-t border-white/5 mb-3" />
 
         {/* Tags */}
-        {game.tags && game.tags.length > 0 && (
+        <div className="text-[8px] text-slate-800 font-mono mb-1">
+          DB Tags: {JSON.stringify(game.tags)} | Updated: {game.updated_at || 'Never'}
+        </div>
+        {processedTags && processedTags.length > 0 && (
           <div className="flex flex-wrap gap-1.5 mb-3">
-            {game.tags.filter(t => t !== 'Upcoming' && t !== 'Live').map(tag => {
+            {processedTags.map(tag => {
               const tagInfo = getTagInfo(tag)
               return (
                 <span
