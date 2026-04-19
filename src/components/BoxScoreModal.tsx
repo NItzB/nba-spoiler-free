@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { getTeam } from '../lib/teams';
 import * as NBAIcons from 'react-nba-logos';
 
@@ -33,45 +34,67 @@ interface BoxScoreModalProps {
 export default function BoxScoreModal({ isOpen, onClose, data }: BoxScoreModalProps) {
   const [activeTeamIndex, setActiveTeamIndex] = useState(0);
 
+  // Lock body scroll and handle Esc key
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+      const handleEsc = (e: KeyboardEvent) => {
+        if (e.key === 'Escape') onClose();
+      };
+      window.addEventListener('keydown', handleEsc);
+      return () => {
+        document.body.style.overflow = 'unset';
+        window.removeEventListener('keydown', handleEsc);
+      };
+    }
+  }, [isOpen, onClose]);
+
   if (!isOpen || !data || data.length === 0) return null;
 
   const currentTeamData = data[activeTeamIndex];
   const teamInfo = getTeam(currentTeamData.team);
   const Logo = (NBAIcons as any)[teamInfo.abbreviation];
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-hidden">
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-8 md:p-12">
       {/* Backdrop */}
       <div 
-        className="absolute inset-0 bg-black/80 backdrop-blur-md animate-in fade-in duration-300" 
+        className="absolute inset-0 bg-black/85 backdrop-blur-xl animate-in fade-in duration-300" 
         onClick={onClose} 
       />
       
       {/* Modal Container */}
-      <div className="relative w-full max-w-4xl bg-bg-card border border-white/10 rounded-2xl shadow-2xl flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-300 overflow-hidden">
+      <div className="relative w-full max-w-5xl bg-[#0f172a] border border-white/10 rounded-3xl shadow-2xl flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-300 overflow-hidden ring-1 ring-white/10">
         
         {/* Header */}
-        <div className="p-4 sm:p-6 border-b border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div className="p-2 bg-white/5 rounded-xl border border-white/10">
-              {Logo ? <Logo size={32} /> : <span className="text-xl font-black">{currentTeamData.team}</span>}
+        <div className="p-5 sm:p-8 border-b border-white/5 flex items-center justify-between gap-4 bg-gradient-to-b from-white/5 to-transparent">
+          <div className="flex items-center gap-5">
+            <div className="p-3 bg-white/5 rounded-2xl border border-white/10 shadow-lg">
+              {Logo ? <Logo size={40} /> : <span className="text-2xl font-black">{currentTeamData.team}</span>}
             </div>
             <div>
-              <h2 className="text-xl font-black text-white leading-tight">{teamInfo.city} {teamInfo.name}</h2>
-              <p className="text-xs text-slate-500 font-bold uppercase tracking-widest">Player Statistics</p>
+              <h2 className="text-2xl sm:text-3xl font-black text-white leading-tight tracking-tight">
+                {teamInfo.city} {teamInfo.name}
+              </h2>
+              <div className="flex items-center gap-2 mt-1">
+                <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                <p className="text-xs text-slate-400 font-bold uppercase tracking-[0.2em]">Game Statistics</p>
+              </div>
             </div>
           </div>
           
           <button 
             onClick={onClose}
-            className="absolute top-4 right-4 p-2 hover:bg-white/10 rounded-full text-slate-400 transition-colors"
+            className="p-3 hover:bg-white/10 rounded-2xl text-slate-400 hover:text-white transition-all hover:scale-110 active:scale-90"
           >
-            ✕
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+            </svg>
           </button>
         </div>
 
         {/* Team Selector Tabs */}
-        <div className="flex bg-white/3 border-b border-white/5">
+        <div className="flex bg-white/3 p-2 gap-2 border-b border-white/5">
           {data.map((teamBox, idx) => {
             const team = getTeam(teamBox.team);
             const isActive = activeTeamIndex === idx;
@@ -79,10 +102,10 @@ export default function BoxScoreModal({ isOpen, onClose, data }: BoxScoreModalPr
               <button
                 key={teamBox.team}
                 onClick={() => setActiveTeamIndex(idx)}
-                className={`flex-1 py-3 px-4 text-xs font-black uppercase tracking-widest transition-all ${
+                className={`flex-1 py-3 px-6 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
                   isActive 
-                    ? 'text-white border-b-2 border-orange-500 bg-white/5' 
-                    : 'text-slate-500 hover:text-slate-300 hover:bg-white/2'
+                    ? 'text-white bg-orange-500 shadow-fire ring-1 ring-orange-400/50' 
+                    : 'text-slate-500 hover:text-slate-300 hover:bg-white/5'
                 }`}
               >
                 {team.name}
@@ -92,42 +115,42 @@ export default function BoxScoreModal({ isOpen, onClose, data }: BoxScoreModalPr
         </div>
 
         {/* Stats Table Wrapper */}
-        <div className="flex-1 overflow-auto custom-scrollbar p-1">
-          <table className="w-full text-left border-collapse min-w-[700px]">
-            <thead className="sticky top-0 bg-bg-card z-10 shadow-sm">
-              <tr className="text-[10px] uppercase font-bold text-slate-500 border-b border-white/5">
-                <th className="py-3 px-4 sticky left-0 bg-bg-card">Player</th>
-                <th className="py-3 px-2">MIN</th>
-                <th className="py-3 px-2">PTS</th>
-                <th className="py-3 px-2">FG</th>
-                <th className="py-3 px-2">3PT</th>
-                <th className="py-3 px-2">REB</th>
-                <th className="py-3 px-2">AST</th>
-                <th className="py-3 px-2">STL</th>
-                <th className="py-3 px-2">BLK</th>
-                <th className="py-3 px-2">TO</th>
-                <th className="py-3 px-2">+/-</th>
+        <div className="flex-1 overflow-auto custom-scrollbar">
+          <table className="w-full text-left border-collapse min-w-[800px]">
+            <thead className="sticky top-0 bg-[#0f172a] z-10">
+              <tr className="text-[10px] uppercase font-bold text-slate-500 border-b border-white/10">
+                <th className="py-4 px-6 sticky left-0 bg-[#0f172a]">Player</th>
+                <th className="py-4 px-3">MIN</th>
+                <th className="py-4 px-3">PTS</th>
+                <th className="py-4 px-3">FG</th>
+                <th className="py-4 px-3">3PT</th>
+                <th className="py-4 px-3">FT</th>
+                <th className="py-4 px-3">REB</th>
+                <th className="py-4 px-3">AST</th>
+                <th className="py-4 px-3">STL</th>
+                <th className="py-4 px-3">BLK</th>
+                <th className="py-4 px-3 text-right pr-8">+/-</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
               {currentTeamData.players.map((p, i) => (
-                <tr key={i} className={`hover:bg-white/2 transition-colors border-b border-white/5 ${!p.active ? 'opacity-40' : ''}`}>
-                  <td className="py-3 px-4 sticky left-0 bg-bg-card/95 backdrop-blur-sm">
+                <tr key={i} className={`hover:bg-white/[0.03] transition-colors ${!p.active ? 'opacity-30 grayscale' : ''}`}>
+                  <td className="py-4 px-6 sticky left-0 bg-[#0f172a]/95 backdrop-blur-sm">
                     <div className="flex flex-col">
-                      <span className="text-sm font-bold text-white truncate">{p.name}</span>
-                      <span className="text-[10px] font-bold text-slate-500 uppercase">{p.pos}</span>
+                      <span className="text-sm font-bold text-white tracking-tight">{p.name}</span>
+                      <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-tighter">{p.pos}</span>
                     </div>
                   </td>
-                  <td className="py-3 px-2 text-xs font-medium text-slate-300">{p.min || '--'}</td>
-                  <td className="py-3 px-2 text-sm font-black text-white">{p.pts || '0'}</td>
-                  <td className="py-3 px-2 text-xs font-medium text-slate-400">{p.fg || '--'}</td>
-                  <td className="py-3 px-2 text-xs font-medium text-slate-400">{p["3pt"] || '--'}</td>
-                  <td className="py-3 px-2 text-xs font-bold text-slate-300">{p.reb || '0'}</td>
-                  <td className="py-3 px-2 text-xs font-bold text-slate-300">{p.ast || '0'}</td>
-                  <td className="py-3 px-2 text-xs font-medium text-slate-400">{p.stl || '0'}</td>
-                  <td className="py-3 px-2 text-xs font-medium text-slate-400">{p.blk || '0'}</td>
-                  <td className="py-3 px-2 text-xs font-medium text-slate-400">{p.to || '0'}</td>
-                  <td className={`py-3 px-2 text-xs font-black ${
+                  <td className="py-4 px-3 text-xs font-medium text-slate-400">{p.min || '--'}</td>
+                  <td className="py-4 px-3 text-sm font-black text-white">{p.pts || '0'}</td>
+                  <td className="py-4 px-3 text-xs font-bold text-slate-400">{p.fg || '--'}</td>
+                  <td className="py-4 px-3 text-xs font-bold text-slate-400">{p["3pt"] || '--'}</td>
+                  <td className="py-4 px-3 text-xs font-bold text-slate-400">{p.ft || '--'}</td>
+                  <td className="py-4 px-3 text-xs font-black text-slate-300">{p.reb || '0'}</td>
+                  <td className="py-4 px-3 text-xs font-black text-slate-300">{p.ast || '0'}</td>
+                  <td className="py-4 px-3 text-[11px] font-bold text-slate-400">{p.stl || '0'}</td>
+                  <td className="py-4 px-3 text-[11px] font-bold text-slate-400">{p.blk || '0'}</td>
+                  <td className={`py-4 px-3 text-right pr-8 text-xs font-black ${
                     parseInt(p.plus_minus || '0') > 0 ? 'text-green-400' : 
                     parseInt(p.plus_minus || '0') < 0 ? 'text-red-400' : 'text-slate-500'
                   }`}>
@@ -140,12 +163,16 @@ export default function BoxScoreModal({ isOpen, onClose, data }: BoxScoreModalPr
         </div>
 
         {/* Footer */}
-        <div className="p-3 bg-white/2 border-t border-white/5 text-center">
-          <p className="text-[10px] text-slate-600 font-bold uppercase tracking-widest">
-            Individual Player Statistics • Data powered by ESPN
+        <div className="p-4 bg-white/[0.02] border-t border-white/5 flex items-center justify-center gap-3">
+          <div className="w-1.5 h-1.5 rounded-full bg-slate-700" />
+          <p className="text-[10px] text-slate-500 font-bold uppercase tracking-[0.3em]">
+            Official Individual Game Statistics • Powered by ESPN
           </p>
+          <div className="w-1.5 h-1.5 rounded-full bg-slate-700" />
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
+
