@@ -49,7 +49,8 @@ export const TAGS: Record<string, TagInfo> = {
 };
 
 export const getTeam = (abbr: string): TeamInfo => {
-  return TEAMS[abbr] || { abbreviation: abbr, city: '', name: abbr, primaryColor: '#4a4a8a', secondaryColor: '#2d2d5e' };
+  const normalizedAbbr = abbr === 'NY' ? 'NYK' : abbr === 'SA' ? 'SAS' : abbr === 'NO' ? 'NOP' : abbr;
+  return TEAMS[normalizedAbbr] || { abbreviation: normalizedAbbr, city: '', name: normalizedAbbr, primaryColor: '#4a4a8a', secondaryColor: '#2d2d5e' };
 };
 
 export const getTagInfo = (tag: string): TagInfo => {

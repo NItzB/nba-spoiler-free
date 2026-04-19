@@ -133,7 +133,10 @@ def fetch_and_insert_for_date(target_date):
             live_period = status.get('period')
             
             game_recap = None
-            headlines = event.get('headlines', [])
+            headlines = competition.get('headlines', [])
+            if not headlines:
+                headlines = event.get('headlines', [])
+            
             if headlines:
                 game_recap = headlines[0].get('shortLinkText') or headlines[0].get('description')
 

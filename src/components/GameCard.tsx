@@ -31,8 +31,9 @@ function getIsraelTime(utcString: string | null): string {
 
 function TeamDisplay({ abbr, side, record }: { abbr: string; side: 'home' | 'away'; record?: string }) {
   const team = getTeam(abbr)
+  const normalizedAbbr = team.abbreviation;
   // Dynamically get the logo component
-  const LogoComponent = (NBAIcons as Record<string, React.ComponentType<{ size?: number }>>)[abbr]
+  const LogoComponent = (NBAIcons as Record<string, React.ComponentType<{ size?: number }>>)[normalizedAbbr]
 
   return (
     <div className={`flex flex-col items-center gap-2 ${side === 'home' ? 'text-right' : 'text-left'}`}>
