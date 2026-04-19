@@ -34,17 +34,90 @@ export const TEAMS: Record<string, TeamInfo> = {
 };
 
 export const TAGS: Record<string, TagInfo> = {
-  'High Scoring': { label: 'High Scoring', icon: '🏀', color: '#fbbf24', bgColor: 'rgba(251,191,36,0.15)' },
-  'Defensive Battle': { label: 'Defensive Battle', icon: '🛡️', color: '#94a3b8', bgColor: 'rgba(148,163,184,0.15)' },
-  'Clutch Ending': { label: 'Clutch Ending', icon: '⚡', color: '#ff6b35', bgColor: 'rgba(255,107,53,0.15)' },
-  'Close Game': { label: 'Close Game', icon: '🤝', color: '#3b82f6', bgColor: 'rgba(59,130,246,0.15)' },
-  'Playoff Intensity': { label: 'Playoff Intensity', icon: '🏆', color: '#dc2626', bgColor: 'rgba(220,38,38,0.15)' },
-  'OT': { label: 'OT', icon: '⏱️', color: '#a78bfa', bgColor: 'rgba(167,139,250,0.15)' },
-  'Blowout': { label: 'Blowout', icon: '💨', color: '#64748b', bgColor: 'rgba(100,116,139,0.15)' },
-  'Rivalry': { label: 'Rivalry', icon: '🔥', color: '#f97316', bgColor: 'rgba(249,115,22,0.15)' },
-  'Star Performance': { label: 'Star Player', icon: '⭐', color: '#facc15', bgColor: 'rgba(250,204,21,0.15)' },
-  'Live': { label: 'Live Action', icon: '🔴', color: '#ef4444', bgColor: 'rgba(239,68,68,0.15)' },
-  'Upcoming': { label: 'Scheduled', icon: '🗓️', color: '#fcd34d', bgColor: 'rgba(252,211,77,0.15)' }
+  'High Scoring': { 
+    label: 'High Scoring', 
+    icon: '🏀', 
+    color: '#fbbf24', 
+    bgColor: 'rgba(251,191,36,0.15)',
+    explanation: 'A high-octane offensive game with a combined score of 220+ points.'
+  },
+  'Defensive Battle': { 
+    label: 'Defensive Battle', 
+    icon: '🛡️', 
+    color: '#94a3b8', 
+    bgColor: 'rgba(148,163,184,0.15)',
+    explanation: 'A gritty, low-scoring defensive showcase where every bucket was earned.'
+  },
+  'Clutch Ending': { 
+    label: 'Clutch Ending', 
+    icon: '⚡', 
+    color: '#ff6b35', 
+    bgColor: 'rgba(255,107,53,0.15)',
+    explanation: 'A thrilling finish decided by 3 points or less in the closing minutes.'
+  },
+  'Close Game': { 
+    label: 'Close Game', 
+    icon: '🤝', 
+    color: '#3b82f6', 
+    bgColor: 'rgba(59,130,246,0.15)',
+    explanation: 'A competitive matchup with a final margin of 5 points or less.'
+  },
+  'Star Performance': { 
+    label: 'Star Performance', 
+    icon: '🌟', 
+    color: '#f87171', 
+    bgColor: 'rgba(248,113,113,0.15)',
+    explanation: 'At least one player dominated with a massive 35+ point performance.'
+  },
+  'Top Performer': { 
+    label: 'Top Performer', 
+    icon: '⭐', 
+    color: '#60a5fa', 
+    bgColor: 'rgba(96,165,250,0.15)',
+    explanation: 'A standout game from a star player reaching 30+ points.'
+  },
+  'Playoff Intensity': { 
+    label: 'Playoff Intensity', 
+    icon: '🏆', 
+    color: '#dc2626', 
+    bgColor: 'rgba(220,38,38,0.15)',
+    explanation: 'High-stakes basketball with postseason or play-in atmosphere.'
+  },
+  'OT': { 
+    label: 'OT', 
+    icon: '⏱️', 
+    color: '#a78bfa', 
+    bgColor: 'rgba(167,139,250,0.15)',
+    explanation: 'This game went into overtime! Free basketball forEveryone.'
+  },
+  'Blowout': { 
+    label: 'Blowout', 
+    icon: '💨', 
+    color: '#64748b', 
+    bgColor: 'rgba(100,116,139,0.15)',
+    explanation: 'A one-sided affair where one team dominated from start to finish.'
+  },
+  'Rivalry': { 
+    label: 'Rivalry', 
+    icon: '🔥', 
+    color: '#f97316', 
+    bgColor: 'rgba(249,115,22,0.15)',
+    explanation: 'A historic or geographic rivalry with extra tension on the court.'
+  },
+  'Upcoming': { 
+    label: 'Scheduled', 
+    icon: '🗓️', 
+    color: '#94a3b8', 
+    bgColor: 'rgba(148,163,184,0.15)',
+    explanation: 'This game hasn\'t started yet. Check back later for ratings!'
+  },
+  'Live': { 
+    label: 'Live', 
+    icon: '🔴', 
+    color: '#ef4444', 
+    bgColor: 'rgba(239,68,68,0.15)',
+    explanation: 'Check current action! This game is in progress right now.'
+  },
 };
 
 export const getTeam = (abbr: string): TeamInfo => {
@@ -53,5 +126,5 @@ export const getTeam = (abbr: string): TeamInfo => {
 };
 
 export const getTagInfo = (tag: string): TagInfo => {
-  return TAGS[tag] || { label: tag, icon: '📌', color: '#94a3b8', bgColor: 'rgba(148,163,184,0.15)' };
+  return TAGS[tag] || { label: tag, icon: '📌', color: '#94a3b8', bgColor: 'rgba(148,163,184,0.15)', explanation: 'General game tag.' };
 };

@@ -177,7 +177,7 @@ export default function GameCard({ game, globalSpoilerVisible, rank }: GameCardP
               return (
                 <span
                   key={tag}
-                  className="tag-pill font-medium"
+                  className="tag-pill font-medium group relative cursor-help"
                   style={{
                     color: tagInfo.color,
                     backgroundColor: tagInfo.bgColor,
@@ -186,6 +186,16 @@ export default function GameCard({ game, globalSpoilerVisible, rank }: GameCardP
                 >
                   <span>{tagInfo.icon}</span>
                   {tagInfo.label}
+
+                  {/* Premium Tag Tooltip */}
+                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-slate-900/95 backdrop-blur-md border border-white/10 rounded-lg shadow-2xl text-[10px] leading-relaxed text-slate-200 w-48 pointer-events-none opacity-0 group-hover:opacity-100 transition-all duration-200 z-50 transform origin-bottom scale-95 group-hover:scale-100">
+                    <p className="font-semibold mb-0.5" style={{ color: tagInfo.color }}>
+                      {tagInfo.label}
+                    </p>
+                    {tagInfo.explanation}
+                    {/* Tooltip arrow */}
+                    <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-slate-900/95" />
+                  </div>
                 </span>
               )
             })}

@@ -78,10 +78,10 @@ def calculate_excitement(home_score, away_score, is_ot, leaders=None):
     if margin <= 3:
         score += 2.5
         tags.append("Clutch Ending")
-    elif margin <= 8:
+    elif margin <= 5:
         score += 1.5
         tags.append("Close Game")
-    elif margin <= 12:
+    elif margin <= 10:
         score += 0.5
 
     # 2. Score intensity (0.0 to 1.5)
