@@ -29,7 +29,7 @@ function getIsraelTime(utcString: string | null): string {
   }
 }
 
-function TeamDisplay({ abbr, side }: { abbr: string; side: 'home' | 'away' }) {
+function TeamDisplay({ abbr, side, record }: { abbr: string; side: 'home' | 'away'; record?: string }) {
   const team = getTeam(abbr)
   // Dynamically get the logo component
   const LogoComponent = (NBAIcons as Record<string, React.ComponentType<{ size?: number }>>)[abbr]
@@ -51,6 +51,9 @@ function TeamDisplay({ abbr, side }: { abbr: string; side: 'home' | 'away' }) {
       <div className="text-center">
         <p className="text-[11px] text-slate-400 font-medium leading-tight">{team.city}</p>
         <p className="text-sm font-bold text-white leading-tight">{team.name}</p>
+        {record && (
+          <p className="text-[10px] text-slate-500 font-bold mt-0.5">{record}</p>
+        )}
       </div>
     </div>
   )
@@ -106,7 +109,7 @@ export default function GameCard({ game, globalSpoilerVisible, rank }: GameCardP
       {isLive && (
         <div className="absolute top-3 left-3 px-2 py-0.5 rounded-full bg-red-500/20 border border-red-500/40 text-red-400 text-[10px] font-bold uppercase tracking-widest animate-pulse flex items-center gap-1.5">
           <div className="w-1.5 h-1.5 rounded-full bg-red-500 shadow-fire" />
-          LIVE
+          {game.live_period && game.live_clock ? `Q${game.live_period} ${game.live_clock}` : 'LIVE'}
         </div>
       )}
 
@@ -121,13 +124,13 @@ export default function GameCard({ game, globalSpoilerVisible, rank }: GameCardP
       <div className="relative p-5 pt-8">
         {/* Teams row */}
         <div className="flex items-center justify-between gap-3 mb-4">
-          <TeamDisplay abbr={game.away_team} side="away" />
+          <TeamDisplay abbr={game.away_team} side="away" record={game.away_record} />
 
           {/* Center: score/time + excitement */}
           <div className="flex flex-col items-center gap-2 flex-1 min-w-0">
             {isLive ? (
               <div className="text-sm font-black text-white px-3 py-1 bg-red-500/20 rounded-xl border border-red-500/30 whitespace-nowrap">
-                IN PROGRESS
+                {game.live_period && game.live_clock ? `Q${game.live_period} ${game.live_clock}` : 'IN PROGRESS'}
               </div>
             ) : isScheduled ? (
               <div className="text-sm font-black text-amber-200 px-3 py-1 bg-amber-500/20 rounded-xl border border-amber-500/30 whitespace-nowrap">
@@ -143,7 +146,7 @@ export default function GameCard({ game, globalSpoilerVisible, rank }: GameCardP
             </div>
           </div>
 
-          <TeamDisplay abbr={game.home_team} side="home" />
+          <TeamDisplay abbr={game.home_team} side="home" record={game.home_record} />
         </div>
 
         {/* Divider */}
@@ -249,6 +252,65 @@ export default function GameCard({ game, globalSpoilerVisible, rank }: GameCardP
             )}
           </div>
         </div>
+
+        {/* Detailed Stats (Revealed) */}
+        {showScore && (
+          <div className="mt-4 pt-4 border-t border-white/5 animate-in fade-in slide-in-from-top-2 duration-300">
+            {/* Linescore mini-table */}
+            {(game.home_line || game.away_line) && (
+              <div className="mb-4 bg-white/5 rounded-lg overflow-hidden border border-white/5">
+                <div className="grid grid-cols-6 text-[10px] uppercase font-bold text-slate-500 py-1.5 px-3 bg-white/5">
+                  <div className="col-span-2">Quarter</div>
+                  <div>1</div>
+                  <div>2</div>
+                  <div>3</div>
+                  <div>4</div>
+                </div>
+                <div className="grid grid-cols-6 text-[11px] font-black text-slate-300 py-1.5 px-3 border-t border-white/5">
+                  <div className="col-span-2">{game.away_team}</div>
+                  {game.away_line?.map((s, i) => <div key={i}>{s}</div>)}
+                </div>
+                <div className="grid grid-cols-6 text-[11px] font-black text-slate-300 py-1.5 px-3 border-t border-white/5">
+                  <div className="col-span-2">{game.home_team}</div>
+                  {game.home_line?.map((s, i) => <div key={i}>{s}</div>)}
+                </div>
+              </div>
+            )}
+
+            {/* Recap */}
+            {game.game_recap && (
+              <p className="text-[11px] text-slate-400 italic mb-4 leading-relaxed px-1">
+                "{game.game_recap}"
+              </p>
+            )}
+
+            {/* Top Leaders */}
+            <div className="grid grid-cols-2 gap-3">
+              {game.away_leaders && (
+                <div className="bg-white/5 rounded-lg p-2 border border-white/5">
+                  <p className="text-[9px] uppercase font-bold text-slate-500 mb-1">{game.away_team} Star</p>
+                  <p className="text-xs font-black text-white truncate">{game.away_leaders.name}</p>
+                  <p className="text-[10px] font-bold text-orange-400">{game.away_leaders.stat} PTS</p>
+                </div>
+              )}
+              {game.home_leaders && (
+                <div className="bg-white/5 rounded-lg p-2 border border-white/5">
+                  <p className="text-[9px] uppercase font-bold text-slate-500 mb-1">{game.home_team} Star</p>
+                  <p className="text-xs font-black text-white truncate">{game.home_leaders.name}</p>
+                  <p className="text-[10px] font-bold text-orange-400">{game.home_leaders.stat} PTS</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Venue Info */}
+        {game.venue_name && (
+          <div className="mt-3 pt-3 border-t border-white/5 text-[10px] text-slate-600 flex items-center justify-center gap-1.5">
+            <span>📍</span>
+            <span className="uppercase tracking-widest font-bold">{game.venue_name}</span>
+          </div>
+        )}
       </div>
     </div>
   )

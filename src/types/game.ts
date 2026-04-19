@@ -12,6 +12,16 @@ export interface Game {
   game_time_utc: string | null;
   status?: string;
   series_summary?: string | null;
+  home_record?: string;
+  away_record?: string;
+  venue_name?: string;
+  live_period?: number;
+  live_clock?: string;
+  game_recap?: string;
+  home_leaders?: any;
+  away_leaders?: any;
+  home_line?: any[];
+  away_line?: any[];
   created_at?: string;
   updated_at?: string;
 }

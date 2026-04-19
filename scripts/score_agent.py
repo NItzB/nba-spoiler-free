@@ -128,6 +128,55 @@ def fetch_and_insert_for_date(target_date):
             if series_info and 'summary' in series_info:
                 series_summary = series_info['summary']
             
+            venue_name = competition.get('venue', {}).get('fullName')
+            live_clock = status.get('displayClock')
+            live_period = status.get('period')
+            
+            game_recap = None
+            headlines = event.get('headlines', [])
+            if headlines:
+                game_recap = headlines[0].get('shortLinkText') or headlines[0].get('description')
+
+            home_record = ""
+            away_record = ""
+            home_leaders = {}
+            away_leaders = {}
+            home_line = []
+            away_line = []
+
+            for comp in competition['competitors']:
+                # Record
+                rec_summary = ""
+                recs = comp.get('records', [])
+                if recs:
+                    rec_summary = recs[0].get('summary', "")
+                
+                # leaders
+                leader_obj = {}
+                leaders_cats = comp.get('leaders', [])
+                if leaders_cats:
+                    # Look for points category (or rating for more stats)
+                    pts_cat = next((c for c in leaders_cats if c.get('name') == 'points'), None)
+                    if pts_cat and pts_cat.get('leaders'):
+                        top_leader = pts_cat['leaders'][0]
+                        leader_obj = {
+                            "name": top_leader.get('athlete', {}).get('displayName'),
+                            "stat": top_leader.get('displayValue'),
+                            "headshot": top_leader.get('athlete', {}).get('headshot')
+                        }
+                
+                # Linescores
+                lines = [ls.get('value') for ls in comp.get('linescores', [])]
+
+                if comp['homeAway'] == 'home':
+                    home_record = rec_summary
+                    home_leaders = leader_obj
+                    home_line = lines
+                else:
+                    away_record = rec_summary
+                    away_leaders = leader_obj
+                    away_line = lines
+
             payload.append({
                 "date": db_date_str,
                 "home_team": home_team,
@@ -139,6 +188,16 @@ def fetch_and_insert_for_date(target_date):
                 "is_overtime": is_ot,
                 "status": game_status,
                 "series_summary": series_summary,
+                "home_record": home_record,
+                "away_record": away_record,
+                "venue_name": venue_name,
+                "live_period": live_period,
+                "live_clock": live_clock,
+                "game_recap": game_recap,
+                "home_leaders": home_leaders,
+                "away_leaders": away_leaders,
+                "home_line": home_line,
+                "away_line": away_line,
                 "created_at": datetime.now().isoformat(),
                 "updated_at": datetime.now().isoformat()
             })
