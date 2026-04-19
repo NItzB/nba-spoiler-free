@@ -71,33 +71,39 @@ def calculate_excitement(home_score, away_score, is_ot, leaders=None):
         score += 1.5
         tags.append("OT")
         
-    # 1. Margin-based excitement (0.0 to 3.0)
-    # Very Close (<= 3 pts) -> +2.5
-    # Close (<= 8 pts) -> +1.5
-    # Decent (<= 12 pts) -> +0.5
-    if margin <= 3:
+    score = 6.5  # Base score (Decent+)
+    tags = []
+    
+    margin = abs(home_score - away_score)
+    total_score = home_score + away_score
+    
+    if is_ot:
         score += 1.5
+        tags.append("OT")
+        
+    # 1. Margin-based excitement (Bonuses and Reductions)
+    if margin <= 3:
+        score += 2.0
         tags.append("Clutch Ending")
     elif margin <= 5:
-        score += 0.8
+        score += 1.0
         tags.append("Close Game")
-    elif margin <= 10:
-        score += 0.3
+    elif margin >= 25:
+        score -= 3.0
+        tags.append("Blowout")
+    elif margin >= 15:
+        score -= 1.5
+        tags.append("Blowout")
 
-    # 2. Score intensity (0.0 to 1.5)
-    total_score = home_score + away_score
+    # 2. Score intensity
     if total_score >= 235:
-        score += 1.5
-        tags.append("High Scoring")
-    elif total_score >= 220:
-        score += 0.8
+        score += 1.0
         tags.append("High Scoring")
     elif total_score <= 185 and total_score > 0:
-        # Defensive battles can be exciting too
-        score += 1.0
+        score -= 0.5
         tags.append("Defensive Battle")
 
-    # 3. Individual performances (0.0 to 2.0)
+    # 3. Individual performances
     if leaders:
         max_pts = 0
         for leader_group in leaders:
