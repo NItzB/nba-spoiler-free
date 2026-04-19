@@ -22,6 +22,7 @@ export interface Game {
   away_leaders?: any;
   home_line?: any[];
   away_line?: any[];
+  boxscore_data?: any;
   created_at?: string;
   updated_at?: string;
 }

@@ -11,6 +11,54 @@ SUPABASE_URL = "https://jffhhtbhecstgyhmiabn.supabase.co"
 def log(msg):
     print(f"[SCORE AGENT] {msg}", flush=True)
 
+def fetch_boxscore(game_id):
+    """Fetches full player box score from ESPN Summary API"""
+    try:
+        url = f"https://site.api.espn.com/apis/site/v2/sports/basketball/nba/summary?event={game_id}"
+        resp = requests.get(url, timeout=10)
+        data = resp.json()
+        
+        boxscore = data.get('boxscore', {})
+        players_data = boxscore.get('players', [])
+        
+        teams_stats = []
+        for team_box in players_data:
+            team_info = team_box.get('team', {})
+            stats_list = team_box.get('statistics', [])
+            if not stats_list: continue
+            
+            # Usually index 0 is the main player stats
+            main_stats = stats_list[0]
+            labels = main_stats.get('labels', [])
+            athletes = main_stats.get('athletes', [])
+            
+            processed_players = []
+            for entry in athletes:
+                player = entry.get('athlete', {})
+                stats = entry.get('stats', [])
+                
+                # Create a simple stats dictionary
+                stat_dict = {
+                    "name": player.get('displayName'),
+                    "active": entry.get('active', True),
+                    "pos": player.get('position', {}).get('abbreviation')
+                }
+                # Map headers (MIN, PTS, etc) to lower case keys
+                for i, label in enumerate(labels):
+                    if i < len(stats):
+                        stat_dict[label.lower().replace('+/-', 'plus_minus')] = stats[i]
+                
+                processed_players.append(stat_dict)
+                
+            teams_stats.append({
+                "team": team_info.get('abbreviation'),
+                "players": processed_players
+            })
+        return teams_stats
+    except Exception as e:
+        log(f"Error fetching boxscore for {game_id}: {e}")
+        return None
+
 def calculate_excitement(home_score, away_score, is_ot):
     margin = abs(home_score - away_score)
     total_score = home_score + away_score
@@ -180,7 +228,14 @@ def fetch_and_insert_for_date(target_date):
                     away_leaders = leader_obj
                     away_line = lines
 
+            # Fetch full boxscore for in_progress or completed games
+            boxscore_data = None
+            if game_status in ['in_progress', 'completed']:
+                log(f"Fetching boxscore for {event.get('id')}...")
+                boxscore_data = fetch_boxscore(event.get('id'))
+
             payload.append({
+                "id": event.get('id'),
                 "date": db_date_str,
                 "home_team": home_team,
                 "away_team": away_team,
@@ -201,6 +256,7 @@ def fetch_and_insert_for_date(target_date):
                 "away_leaders": away_leaders,
                 "home_line": home_line,
                 "away_line": away_line,
+                "boxscore_data": boxscore_data,
                 "created_at": datetime.now().isoformat(),
                 "updated_at": datetime.now().isoformat()
             })

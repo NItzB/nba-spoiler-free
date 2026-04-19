@@ -4,6 +4,7 @@ import { parseISO } from 'date-fns'
 import { Game } from '../types/game'
 import { getTeam, getTagInfo } from '../lib/teams'
 import ExcitementBadge, { getExcitementTier, TIER_CONFIG } from './ExcitementBadge'
+import BoxScoreModal from './BoxScoreModal'
 
 // Israel Standard Time / Daylight Time is UTC+2 / UTC+3
 // We'll dynamically compute it, but use a fixed offset for simplicity
@@ -62,6 +63,7 @@ function TeamDisplay({ abbr, side, record }: { abbr: string; side: 'home' | 'awa
 
 export default function GameCard({ game, globalSpoilerVisible, rank }: GameCardProps) {
   const [localSpoilerVisible, setLocalSpoilerVisible] = useState(false)
+  const [isBoxScoreOpen, setIsBoxScoreOpen] = useState(false)
   const tier = getExcitementTier(game.excitement_score)
   const tierConfig = TIER_CONFIG[tier]
   const showScore = globalSpoilerVisible || localSpoilerVisible
@@ -251,8 +253,24 @@ export default function GameCard({ game, globalSpoilerVisible, rank }: GameCardP
                 <span className="hidden sm:inline">Highlights</span>
               </a>
             )}
+            {game.boxscore_data && showScore && (
+              <button
+                onClick={() => setIsBoxScoreOpen(true)}
+                className="btn-primary text-slate-200 hover:text-white bg-blue-500/10 hover:bg-blue-500/20 border-blue-400/20"
+              >
+                <span>📊</span>
+                <span className="hidden sm:inline">Box Score</span>
+              </button>
+            )}
           </div>
         </div>
+
+        {/* Modal */}
+        <BoxScoreModal 
+          isOpen={isBoxScoreOpen} 
+          onClose={() => setIsBoxScoreOpen(false)} 
+          data={game.boxscore_data} 
+        />
 
         {/* Detailed Stats (Revealed) */}
         {showScore && (
