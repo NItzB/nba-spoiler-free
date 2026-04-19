@@ -1,4 +1,5 @@
-import { format } from 'date-fns'
+import { format, formatDistanceToNow } from 'date-fns'
+import { useState } from 'react'
 import SpoilerToggle from './SpoilerToggle'
 
 interface HeaderProps {
@@ -7,6 +8,7 @@ interface HeaderProps {
   spoilersVisible: boolean
   onSpoilerToggle: () => void
   isUsingMockData: boolean
+  lastSyncTime?: string | null
 }
 
 export default function Header({
@@ -15,8 +17,48 @@ export default function Header({
   spoilersVisible,
   onSpoilerToggle,
   isUsingMockData,
+  lastSyncTime,
 }: HeaderProps) {
   const today = format(new Date(), 'yyyy-MM-dd')
+  const [isSyncing, setIsSyncing] = useState(false)
+
+  const handleForceSync = async () => {
+    let token = localStorage.getItem('gh_pat')
+    if (!token) {
+      token = window.prompt("Enter your GitHub Personal Access Token to force a sync:")
+      if (!token) return
+      localStorage.setItem('gh_pat', token)
+    }
+    
+    setIsSyncing(true)
+    try {
+      const res = await fetch("https://api.github.com/repos/NItzB/nba-spoiler-free/actions/workflows/nba_cron.yml/dispatches", {
+        method: "POST",
+        headers: {
+          "Accept": "application/vnd.github.v3+json",
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ ref: "main" })
+      })
+      
+      if (!res.ok) {
+        if (res.status === 401 || res.status === 403) {
+          localStorage.removeItem('gh_pat')
+          alert("Invalid token. Please try again.")
+          return
+        }
+        throw new Error(`Status ${res.status}`)
+      }
+      
+      alert("Sync triggered successfully! Refresh in 15 seconds.")
+    } catch (e: any) {
+      console.error(e)
+      alert("Failed to trigger sync: " + e.message)
+    } finally {
+      setIsSyncing(false)
+    }
+  }
 
   const handlePrevDay = () => {
     const d = new Date(selectedDate + 'T12:00:00')
@@ -40,16 +82,30 @@ export default function Header({
         <div className="flex items-center justify-between gap-4">
           {/* Logo + Title */}
           <div className="flex items-center gap-3">
-            <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-red-600 shadow-fire text-xl">
+            <button 
+              onClick={handleForceSync}
+              disabled={isSyncing}
+              title="Force Sync"
+              className={`flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-red-600 shadow-fire text-xl transition-all ${isSyncing ? 'animate-pulse opacity-50' : 'hover:scale-105 active:scale-95 cursor-crosshair'}`}
+            >
               🏀
-            </div>
-            <div>
+            </button>
+            <div className="flex flex-col justify-center">
               <h1 className="text-lg sm:text-xl font-black text-white leading-tight tracking-tight">
                 NBA Spoiler-Free
               </h1>
-              <p className="text-[11px] text-slate-400 leading-none font-medium">
-                Watchability Index • 🇮🇱 Israel Time
-              </p>
+              <div className="flex items-center gap-1.5 text-[10px] sm:text-[11px] text-slate-400 font-medium">
+                <span>Watchability Index</span>
+                {lastSyncTime && (
+                  <>
+                    <span>•</span>
+                    <span className="flex items-center gap-1" title={new Date(lastSyncTime).toLocaleString()}>
+                      <span>🔄</span>
+                      {formatDistanceToNow(new Date(lastSyncTime))} ago
+                    </span>
+                  </>
+                )}
+              </div>
             </div>
           </div>
 

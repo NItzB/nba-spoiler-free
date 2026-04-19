@@ -2,8 +2,8 @@ name: NBA Score Agent
 
 on:
   schedule:
-    # Runs every hour between 00:00 and 10:00 UTC
-    - cron: '0 0-10 * * *'
+    # Runs at 05:00 and 08:00 UTC (Morning in Israel Time)
+    - cron: '0 5,8 * * *'
   workflow_dispatch:
     # Allows manual triggering from the GitHub Actions tab
 

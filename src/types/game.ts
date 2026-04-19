@@ -13,6 +13,7 @@ export interface Game {
   status?: string;
   series_summary?: string | null;
   created_at?: string;
+  updated_at?: string;
 }
 
 export type ExcitementTier = 'must-watch' | 'great' | 'decent' | 'skip';

@@ -15,7 +15,7 @@ function getTodayIsrael(): string {
 export default function App() {
   const [selectedDate, setSelectedDate] = useState(getTodayIsrael)
   const [spoilersVisible, setSpoilersVisible] = useState(false)
-  const { games, loading, error, isUsingMockData } = useGames(selectedDate)
+  const { games, loading, error, isUsingMockData, lastSyncTime } = useGames(selectedDate)
 
   return (
     <div className="min-h-screen bg-bg-primary">
@@ -25,6 +25,7 @@ export default function App() {
         spoilersVisible={spoilersVisible}
         onSpoilerToggle={() => setSpoilersVisible(v => !v)}
         isUsingMockData={isUsingMockData}
+        lastSyncTime={lastSyncTime}
       />
 
       <main className="max-w-6xl mx-auto px-4 py-6">

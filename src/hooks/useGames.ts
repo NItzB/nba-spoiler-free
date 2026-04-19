@@ -91,6 +91,7 @@ interface UseGamesResult {
   loading: boolean
   error: string | null
   isUsingMockData: boolean
+  lastSyncTime: string | null
 }
 
 export function useGames(date: string): UseGamesResult {
@@ -98,6 +99,7 @@ export function useGames(date: string): UseGamesResult {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isUsingMockData, setIsUsingMockData] = useState(false)
+  const [lastSyncTime, setLastSyncTime] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -151,6 +153,20 @@ export function useGames(date: string): UseGamesResult {
           
           setGames(sorted)
           setIsUsingMockData(false)
+          
+          if (data && data.length > 0) {
+            const hasUpdatedAt = data.some(g => g.updated_at)
+            if (hasUpdatedAt) {
+              const latestUpdatedAt = Math.max(...data.map(g => new Date(g.updated_at || g.created_at || 0).getTime()))
+              if (latestUpdatedAt > 0) {
+                setLastSyncTime(new Date(latestUpdatedAt).toISOString())
+              }
+            } else {
+              setLastSyncTime(null)
+            }
+          } else {
+            setLastSyncTime(null)
+          }
         }
       } catch (err) {
         if (!cancelled) {
@@ -171,5 +187,5 @@ export function useGames(date: string): UseGamesResult {
     return () => { cancelled = true }
   }, [date])
 
-  return { games, loading, error, isUsingMockData }
+  return { games, loading, error, isUsingMockData, lastSyncTime }
 }
