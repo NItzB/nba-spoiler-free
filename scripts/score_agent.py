@@ -76,13 +76,13 @@ def calculate_excitement(home_score, away_score, is_ot, leaders=None):
     # Close (<= 8 pts) -> +1.5
     # Decent (<= 12 pts) -> +0.5
     if margin <= 3:
-        score += 2.5
+        score += 1.5
         tags.append("Clutch Ending")
     elif margin <= 5:
-        score += 1.5
+        score += 0.8
         tags.append("Close Game")
     elif margin <= 10:
-        score += 0.5
+        score += 0.3
 
     # 2. Score intensity (0.0 to 1.5)
     total_score = home_score + away_score
@@ -117,7 +117,6 @@ def calculate_excitement(home_score, away_score, is_ot, leaders=None):
         elif max_pts >= 30:
             score += 0.5
             tags.append("Top Performer")
-            tags.append("Star Performance")
         
     # Cap score
     score = max(0.0, min(10.0, score))

@@ -64,6 +64,7 @@ function TeamDisplay({ abbr, side, record }: { abbr: string; side: 'home' | 'awa
 export default function GameCard({ game, globalSpoilerVisible, rank }: GameCardProps) {
   const [localSpoilerVisible, setLocalSpoilerVisible] = useState(false)
   const [isBoxScoreOpen, setIsBoxScoreOpen] = useState(false)
+  const [activeTooltip, setActiveTooltip] = useState<string | null>(null)
   const tier = getExcitementTier(game.excitement_score)
   const tierConfig = TIER_CONFIG[tier]
   const showScore = globalSpoilerVisible || localSpoilerVisible
@@ -177,25 +178,36 @@ export default function GameCard({ game, globalSpoilerVisible, rank }: GameCardP
               return (
                 <span
                   key={tag}
-                  className="tag-pill font-medium group relative cursor-help"
+                  className={`tag-pill font-medium relative cursor-pointer transition-all ${
+                    activeTooltip === tag ? 'ring-2 ring-white/20 scale-105' : 'hover:scale-105'
+                  }`}
                   style={{
                     color: tagInfo.color,
                     backgroundColor: tagInfo.bgColor,
                     border: `1px solid ${tagInfo.color}30`,
                   }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setActiveTooltip(activeTooltip === tag ? null : tag);
+                  }}
                 >
                   <span>{tagInfo.icon}</span>
                   {tagInfo.label}
 
-                  {/* Premium Tag Tooltip */}
-                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-slate-900/95 backdrop-blur-md border border-white/10 rounded-lg shadow-2xl text-[10px] leading-relaxed text-slate-200 w-48 pointer-events-none opacity-0 group-hover:opacity-100 transition-all duration-200 z-50 transform origin-bottom scale-95 group-hover:scale-100">
-                    <p className="font-semibold mb-0.5" style={{ color: tagInfo.color }}>
-                      {tagInfo.label}
-                    </p>
-                    {tagInfo.explanation}
-                    {/* Tooltip arrow */}
-                    <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-slate-900/95" />
-                  </div>
+                  {/* Premium Tag Tooltip (Click to Toggle) */}
+                  {activeTooltip === tag && (
+                    <div 
+                      className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-slate-900/95 backdrop-blur-md border border-white/10 rounded-lg shadow-2xl text-[10px] leading-relaxed text-slate-200 w-48 z-50 transform origin-bottom animate-in fade-in zoom-in-95 duration-200"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <p className="font-semibold mb-0.5" style={{ color: tagInfo.color }}>
+                        {tagInfo.label}
+                      </p>
+                      {tagInfo.explanation}
+                      {/* Tooltip arrow */}
+                      <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-slate-900/95" />
+                    </div>
+                  )}
                 </span>
               )
             })}
