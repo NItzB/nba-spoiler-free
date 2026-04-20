@@ -41,6 +41,7 @@ def fetch_boxscore(game_id):
                 stat_dict = {
                     "name": player.get('displayName'),
                     "active": entry.get('active', True),
+                    "starter": entry.get('starter', False),
                     "pos": player.get('position', {}).get('abbreviation')
                 }
                 # Map headers (MIN, PTS, etc) to lower case keys

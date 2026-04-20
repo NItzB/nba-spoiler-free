@@ -18,6 +18,7 @@ interface PlayerStat {
   to?: string;
   plus_minus?: string;
   active?: boolean;
+  starter?: boolean;
 }
 
 interface TeamBoxScore {
@@ -133,30 +134,24 @@ export default function BoxScoreModal({ isOpen, onClose, data }: BoxScoreModalPr
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
-              {currentTeamData.players.map((p, i) => (
-                <tr key={i} className={`hover:bg-white/[0.03] transition-colors ${!p.active ? 'opacity-30 grayscale' : ''}`}>
-                  <td className="py-4 px-6 sticky left-0 bg-[#0f172a]/95 backdrop-blur-sm">
-                    <div className="flex flex-col">
-                      <span className="text-sm font-bold text-white tracking-tight">{p.name}</span>
-                      <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-tighter">{p.pos}</span>
-                    </div>
-                  </td>
-                  <td className="py-4 px-3 text-xs font-medium text-slate-400">{p.min || '--'}</td>
-                  <td className="py-4 px-3 text-sm font-black text-white">{p.pts || '0'}</td>
-                  <td className="py-4 px-3 text-xs font-bold text-slate-400">{p.fg || '--'}</td>
-                  <td className="py-4 px-3 text-xs font-bold text-slate-400">{p["3pt"] || '--'}</td>
-                  <td className="py-4 px-3 text-xs font-bold text-slate-400">{p.ft || '--'}</td>
-                  <td className="py-4 px-3 text-xs font-black text-slate-300">{p.reb || '0'}</td>
-                  <td className="py-4 px-3 text-xs font-black text-slate-300">{p.ast || '0'}</td>
-                  <td className="py-4 px-3 text-[11px] font-bold text-slate-400">{p.stl || '0'}</td>
-                  <td className="py-4 px-3 text-[11px] font-bold text-slate-400">{p.blk || '0'}</td>
-                  <td className={`py-4 px-3 text-right pr-8 text-xs font-black ${
-                    parseInt(p.plus_minus || '0') > 0 ? 'text-green-400' : 
-                    parseInt(p.plus_minus || '0') < 0 ? 'text-red-400' : 'text-slate-500'
-                  }`}>
-                    {parseInt(p.plus_minus || '0') > 0 ? '+' : ''}{p.plus_minus || '0'}
-                  </td>
-                </tr>
+              {/* Starters Section */}
+              <tr className="bg-white/5">
+                <td colSpan={11} className="py-2 px-6">
+                  <span className="text-[10px] font-black uppercase tracking-[0.3em] text-orange-400">Starting Lineup</span>
+                </td>
+              </tr>
+              {currentTeamData.players.filter(p => p.starter).map((p, i) => (
+                <PlayerRow key={`starter-${i}`} p={p} />
+              ))}
+
+              {/* Bench Section */}
+              <tr className="bg-white/5 border-t border-white/10">
+                <td colSpan={11} className="py-2 px-6">
+                  <span className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Bench</span>
+                </td>
+              </tr>
+              {currentTeamData.players.filter(p => !p.starter).map((p, i) => (
+                <PlayerRow key={`bench-${i}`} p={p} />
               ))}
             </tbody>
           </table>
@@ -173,6 +168,34 @@ export default function BoxScoreModal({ isOpen, onClose, data }: BoxScoreModalPr
       </div>
     </div>,
     document.body
+  );
+}
+
+function PlayerRow({ p }: { p: PlayerStat }) {
+  return (
+    <tr className={`hover:bg-white/[0.05] transition-colors ${!p.active ? 'opacity-40 grayscale-[0.5]' : ''}`}>
+      <td className="py-4 px-6 sticky left-0 bg-[#0f172a]/95 backdrop-blur-sm z-10">
+        <div className="flex flex-col">
+          <span className="text-sm font-black text-white tracking-tight">{p.name}</span>
+          <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">{p.pos}</span>
+        </div>
+      </td>
+      <td className="py-4 px-3 text-xs font-bold text-slate-300">{p.min || '--'}</td>
+      <td className="py-4 px-3 text-sm font-black text-white scale-110 origin-left">{p.pts || '0'}</td>
+      <td className="py-4 px-3 text-xs font-black text-slate-200">{p.fg || '--'}</td>
+      <td className="py-4 px-3 text-xs font-bold text-slate-400">{p["3pt"] || '--'}</td>
+      <td className="py-4 px-3 text-xs font-bold text-slate-400">{p.ft || '--'}</td>
+      <td className="py-4 px-3 text-xs font-black text-white">{p.reb || '0'}</td>
+      <td className="py-4 px-3 text-xs font-black text-white">{p.ast || '0'}</td>
+      <td className="py-4 px-3 text-[11px] font-bold text-slate-300">{p.stl || '0'}</td>
+      <td className="py-4 px-3 text-[11px] font-bold text-slate-300">{p.blk || '0'}</td>
+      <td className={`py-4 px-3 text-right pr-8 text-xs font-black ${
+        parseInt(p.plus_minus || '0') > 0 ? 'text-green-400' : 
+        parseInt(p.plus_minus || '0') < 0 ? 'text-red-400' : 'text-slate-500'
+      }`}>
+        {parseInt(p.plus_minus || '0') > 0 ? '+' : ''}{p.plus_minus || '0'}
+      </td>
+    </tr>
   );
 }
 
