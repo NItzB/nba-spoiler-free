@@ -60,29 +60,51 @@ def fetch_boxscore(game_id):
         log(f"Error fetching boxscore for {game_id}: {e}")
         return None
 
-def calculate_excitement(home_score, away_score, is_ot, leaders=None):
+def calculate_excitement(home_score, away_score, is_ot, leaders=None, home_record="0-0", away_record="0-0"):
     margin = abs(home_score - away_score)
     total_score = home_score + away_score
     
-    score = 7.0
+    score = 6.5 # Robust base for production look
     tags = []
     
-    # Overtime logic
-    if is_ot:
-        score += 1.5
-        tags.append("OT")
+    # 1. Underdog / Upset Logic (Spoiler-Free)
+    def get_win_pct(record_str):
+        try:
+            if not record_str or '-' not in record_str: return 0.5
+            w, l = map(int, record_str.split('-'))
+            if w + l == 0: return 0.5
+            return w / (w + l)
+        except: return 0.5
+
+    home_win_pct = get_win_pct(home_record)
+    away_win_pct = get_win_pct(away_record)
+
+    winner_was_underdog = False
+    upset_gap = 0
+    is_away_winner = False
+
+    if home_score > away_score:
+        if away_win_pct > home_win_pct + 0.05:
+            winner_was_underdog = True
+            upset_gap = away_win_pct - home_win_pct
+    elif away_score > home_score:
+        is_away_winner = True
+        if home_win_pct > away_win_pct + 0.05:
+            winner_was_underdog = True
+            upset_gap = home_win_pct - away_win_pct
+
+    if winner_was_underdog:
+        # Scale upset gap (e.g., 0.15 gap * 10 = 1.5 bonus)
+        upset_bonus = upset_gap * 10
+        if is_away_winner: upset_bonus *= 1.5 # Road upsets are significantly more exciting
+        score += min(upset_bonus, 3.5) # Cap upset bonus so it doesn't break the scale
         
-    score = 6.5  # Base score (Decent+)
-    tags = []
-    
-    margin = abs(home_score - away_score)
-    total_score = home_score + away_score
-    
+    # 2. Overtime logic
     if is_ot:
-        score += 1.5
-        tags.append("OT")
+        score += 2.5
+        tags.append("OT Thriller")
         
-    # 1. Margin-based excitement (Bonuses and Reductions)
+    # 3. Margin-based excitement
     if margin <= 3:
         score += 2.0
         tags.append("Clutch Ending")
@@ -96,7 +118,7 @@ def calculate_excitement(home_score, away_score, is_ot, leaders=None):
         score -= 1.5
         tags.append("Blowout")
 
-    # 2. Score intensity
+    # 4. Score intensity
     if total_score >= 235:
         score += 1.0
         tags.append("High Scoring")
@@ -104,16 +126,17 @@ def calculate_excitement(home_score, away_score, is_ot, leaders=None):
         score -= 0.5
         tags.append("Defensive Battle")
 
-    # 3. Individual performances
+    # 5. Individual performances
     if leaders:
         max_pts = 0
-        for leader_group in leaders:
-            if leader_group and 'stat' in leader_group:
-                try:
-                    pts = int(leader_group['stat'].split()[0])
-                    max_pts = max(max_pts, pts)
-                except:
-                    pass
+        for leader in leaders:
+            try:
+                # leader can be a dict (from local leaders_list) or raw ESPN leader
+                val_str = leader.get('displayValue', '0')
+                if ' ' in val_str: val_str = val_str.split()[0]
+                pts = int(val_str)
+                max_pts = max(max_pts, pts)
+            except: pass
         
         if max_pts >= 45:
             score += 2.0
@@ -125,7 +148,7 @@ def calculate_excitement(home_score, away_score, is_ot, leaders=None):
             score += 0.5
             tags.append("Top Performer")
         
-    # Cap score
+    # Clamp and Round
     score = max(0.0, min(10.0, score))
     return round(score, 1), tags
 
@@ -156,8 +179,7 @@ def fetch_and_insert_for_date(target_date):
             competition = event['competitions'][0]
             status = competition['status']
             status_type = status['type']['name']
-            
-            game_time_utc = event.get('date') # ISO timestamp of game start
+            game_time_utc = event.get('date')
             
             # Types: STATUS_SCHEDULED, STATUS_IN_PROGRESS, STATUS_HALFTIME, STATUS_FINAL
             if status_type == 'STATUS_SCHEDULED':
@@ -170,117 +192,86 @@ def fetch_and_insert_for_date(target_date):
             period = status.get('period', 0)
             is_ot = period > 4
             
-            home_team = None
-            away_team = None
-            home_score = 0
-            away_score = 0
+            home_team = away_team = None
+            home_score = away_score = 0
+            home_record = away_record = "0-0"
+            home_leaders = away_leaders = {}
+            home_line = away_line = []
             
-            for competitor in competition['competitors']:
-                team_abbr = competitor['team']['abbreviation']
-                score_str = competitor.get('score', '0')
-                score = int(score_str) if score_str else 0
-                
-                if competitor['homeAway'] == 'home':
-                    home_team = team_abbr
-                    home_score = score
-                else:
-                    away_team = team_abbr
-                    away_score = score
-            
-            notes = competition.get('notes', [])
-            game_note = notes[0].get('headline') if notes else None
-            
-            # Compute excitement and tags for completed AND live games
-            if game_status in ['completed', 'in_progress']:
-                excitement_score, tags = calculate_excitement(home_score, away_score, is_ot)
-                final_score_str = f"{away_score}-{home_score}"
-                if game_status == 'in_progress' and 'Live' not in tags:
-                    tags.append('Live')
-            else:
-                excitement_score = 0
-                tags = ['Upcoming']
-                final_score_str = None
-                
-            if game_note:
-                tags.append(game_note)
-                
-            series_summary = None
-            series_info = competition.get('series')
-            if series_info and 'summary' in series_info:
-                series_summary = series_info['summary']
-            
-            venue_name = competition.get('venue', {}).get('fullName')
-            live_clock = status.get('displayClock')
-            live_period = status.get('period')
-            
-            game_recap = None
-            headlines = competition.get('headlines', [])
-            if not headlines:
-                headlines = event.get('headlines', [])
-            
-            if headlines:
-                game_recap = headlines[0].get('shortLinkText') or headlines[0].get('description')
-
-            home_record = ""
-            away_record = ""
-            home_leaders = {}
-            away_leaders = {}
-            home_line = []
-            away_line = []
+            # Leader list for excitement calculation
+            all_points_leaders = []
 
             for comp in competition['competitors']:
-                # Record
-                rec_summary = ""
-                recs = comp.get('records', [])
-                if recs:
-                    rec_summary = recs[0].get('summary', "")
+                team_abbr = comp['team']['abbreviation']
+                score_val = int(comp.get('score', '0') or 0)
                 
-                # leaders
-                leader_obj = {}
+                # Fetch Record
+                rec_summary = "0-0"
+                for r in comp.get('records', []):
+                    if r.get('type') == 'total' or r.get('name') == 'overall':
+                        rec_summary = r.get('summary', "0-0")
+                        break
+                
+                # Fetch Points Leader for Card
+                pts_leader = {}
                 leaders_cats = comp.get('leaders', [])
-                if leaders_cats:
-                    # Look for points category (or rating for more stats)
-                    pts_cat = next((c for c in leaders_cats if c.get('name') == 'points'), None)
-                    if pts_cat and pts_cat.get('leaders'):
-                        top_leader = pts_cat['leaders'][0]
-                        leader_obj = {
-                            "name": top_leader.get('athlete', {}).get('displayName'),
-                            "stat": top_leader.get('displayValue'),
-                            "headshot": top_leader.get('athlete', {}).get('headshot')
+                for cat in leaders_cats:
+                    if cat.get('name') == 'points' and cat.get('leaders'):
+                        top = cat['leaders'][0]
+                        pts_leader = {
+                            "name": top.get('athlete', {}).get('displayName'),
+                            "stat": top.get('displayValue'),
+                            "headshot": top.get('athlete', {}).get('headshot')
                         }
-                
+                        all_points_leaders.append(top)
+                        break
+
                 # Linescores
                 lines = [ls.get('value') for ls in comp.get('linescores', [])]
 
                 if comp['homeAway'] == 'home':
-                    home_record = rec_summary
-                    home_leaders = leader_obj
-                    home_line = lines
+                    home_team, home_score, home_record, home_leaders, home_line = team_abbr, score_val, rec_summary, pts_leader, lines
                 else:
-                    away_record = rec_summary
-                    away_leaders = leader_obj
-                    away_line = lines
+                    away_team, away_score, away_record, away_leaders, away_line = team_abbr, score_val, rec_summary, pts_leader, lines
 
-            # Fetch full boxscore for in_progress or completed games
+            # Calculate excitement and tags
+            excitement_score = 0
+            tags = []
+            final_score_str = f"{away_score}-{home_score}"
+
+            if game_status in ['completed', 'in_progress']:
+                excitement_score, tags = calculate_excitement(
+                    home_score, away_score, is_ot, 
+                    leaders=all_points_leaders,
+                    home_record=home_record, away_record=away_record
+                )
+                if game_status == 'in_progress':
+                    tags.append('Live')
+            else:
+                tags = ['Upcoming']
+                final_score_str = None
+
+            # Add context tags from ESPN notes
+            notes = competition.get('notes', [])
+            if notes:
+                n_tag = notes[0].get('headline')
+                if n_tag and n_tag not in tags: tags.append(n_tag)
+
+            # Metadata
+            series_summary = competition.get('series', {}).get('summary')
+            venue_name = competition.get('venue', {}).get('fullName')
+            live_clock = status.get('displayClock')
+            live_period = status.get('period')
+            
+            # Headlines/Recap
+            headlines = competition.get('headlines', []) or event.get('headlines', [])
+            game_recap = headlines[0].get('shortLinkText') or headlines[0].get('description') if headlines else None
+
+            # Fetch Boxscore
             boxscore_data = None
             if game_status in ['in_progress', 'completed']:
                 log(f"Fetching boxscore for {event.get('id')}...")
                 boxscore_data = fetch_boxscore(event.get('id'))
-
-            # Re-calculating excitement with leaders if completed
-            if game_status == 'completed':
-                excitement_score, tags = calculate_excitement(home_score, away_score, is_ot, [home_leaders, away_leaders])
-            
-            # Clean up duplicate status tags for UI
-            if game_status == 'in_progress' and 'Live' not in tags:
-                tags.append('Live')
-            elif game_status == 'scheduled' and 'Upcoming' not in tags:
-                tags.append('Upcoming')
-
-            # Add context tags from ESPN notes/headlines (e.g., "Game 7", "Play-In")
-            if game_note:
-                if game_note not in tags: 
-                    tags.append(game_note)
 
             payload.append({
                 "date": db_date_str,
@@ -307,14 +298,14 @@ def fetch_and_insert_for_date(target_date):
                 "created_at": datetime.now().isoformat(),
                 "updated_at": datetime.now().isoformat()
             })
-            log(f"Prepared: {away_team} @ {home_team} | Status: {game_status} | Score: {excitement_score}")
+            log(f"Prepared: {away_team} @ {home_team} | Score: {excitement_score} | Status: {game_status}")
             
         except Exception as e:
-            log(f"Error processing game {event.get('shortName')}: {e}")
+            log(f"Error processing game {event.get('shortName', 'ID:'+event.get('id', '?'))}: {e}")
             continue
 
     if not payload:
-        log("No completed games to insert right now.")
+        log("No games to insert for this date.")
         return
 
     # Delete existing records for this date to prevent duplicates (Idempotent update)
@@ -328,30 +319,20 @@ def fetch_and_insert_for_date(target_date):
     }
 
     try:
-        # 1. Delete old
         requests.delete(delete_url, headers=headers, timeout=15)
-        # 2. Insert new
         response = requests.post(rest_url, headers=headers, json=payload, timeout=15)
         response.raise_for_status()
-        log(f"Successfully inserted/updated {len(payload)} games for {db_date_str}!")
+        log(f"Successfully updated {len(payload)} games for {db_date_str}!")
     except Exception as e:
         log(f"Failed to update database: {e}")
-        if hasattr(e, 'response') and e.response is not None:
-             log(f"Response: {e.response.text}")
 
 def run():
     if not SERVICE_ROLE_KEY:
-        log("ERROR: SUPABASE_DB_PASSWORD (holding the service role key) missing.")
+        log("ERROR: SUPABASE_DB_PASSWORD missing.")
         sys.exit(1)
         
     utc_now = datetime.now()
-    
-    # We will check Yesterday, Today, and Tomorrow to ensure seamless transitions
-    dates_to_check = [
-        utc_now - timedelta(days=1), # Yesterday
-        utc_now,                      # Today
-        utc_now + timedelta(days=1)  # Tomorrow
-    ]
+    dates_to_check = [utc_now - timedelta(days=1), utc_now, utc_now + timedelta(days=1)]
     
     for d in dates_to_check:
         fetch_and_insert_for_date(d)
