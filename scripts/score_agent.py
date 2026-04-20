@@ -192,7 +192,7 @@ def fetch_and_insert_for_date(target_date):
             # Compute excitement and tags for completed AND live games
             if game_status in ['completed', 'in_progress']:
                 excitement_score, tags = calculate_excitement(home_score, away_score, is_ot)
-                final_score_str = f"{home_score}-{away_score}"
+                final_score_str = f"{away_score}-{home_score}"
                 if game_status == 'in_progress' and 'Live' not in tags:
                     tags.append('Live')
             else:
@@ -345,10 +345,11 @@ def run():
         
     utc_now = datetime.now()
     
-    # We will check both Today and Yesterday to ensure we catch everything
+    # We will check Yesterday, Today, and Tomorrow to ensure seamless transitions
     dates_to_check = [
         utc_now - timedelta(days=1), # Yesterday
-        utc_now                      # Today
+        utc_now,                      # Today
+        utc_now + timedelta(days=1)  # Tomorrow
     ]
     
     for d in dates_to_check:

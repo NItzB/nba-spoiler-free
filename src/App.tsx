@@ -8,8 +8,19 @@ import { useGames } from './hooks/useGames'
 
 // Default to today in Israel — we just use local format and let the hook deal with it
 function getTodayIsrael(): string {
-  // The user is in Israel (UTC+3), so new Date() in their browser already reflects this correctly
-  return format(new Date(), 'yyyy-MM-dd')
+  const now = new Date();
+  const currentHour = now.getHours(); // 0-23 in local (Israel) time
+  
+  // If it's early morning (before 12 PM), the "Live" games or games
+  // that just finished belong to the PREVIOUS US day. 
+  // We shift the default view to "Yesterday" for a better morning experience.
+  if (currentHour < 12) {
+    const yesterday = new Date();
+    yesterday.setDate(now.getDate() - 1);
+    return format(yesterday, 'yyyy-MM-dd');
+  }
+  
+  return format(now, 'yyyy-MM-dd');
 }
 
 export default function App() {
