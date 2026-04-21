@@ -249,17 +249,17 @@ export default function GameCard({ game, globalSpoilerVisible, rank }: GameCardP
           </div>
 
           {/* Action buttons */}
-          <div className="flex items-center gap-1.5 ml-auto">
+          <div className="flex items-center gap-1 ml-auto">
             {isCompleted && game.full_game_url && (
               <a
-                id={`watch-game-${game.id}`}
+                id={`gamecast-${game.id}`}
                 href={game.full_game_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="btn-primary text-slate-200 hover:text-white"
+                className="btn-primary text-slate-200 hover:text-white text-xs px-2 py-1 h-8"
               >
-                <span>▶</span>
-                <span className="hidden sm:inline">Full Game</span>
+                <span className="text-sm">📋</span>
+                <span className="hidden sm:inline">Gamecast</span>
               </a>
             )}
             {isCompleted && game.highlights_url && (
@@ -268,18 +268,18 @@ export default function GameCard({ game, globalSpoilerVisible, rank }: GameCardP
                 href={game.highlights_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="btn-primary text-slate-200 hover:text-white bg-orange-500/10 hover:bg-orange-500/20 border-orange-400/20"
+                className="btn-primary text-slate-200 hover:text-white bg-orange-500/10 hover:bg-orange-500/20 border-orange-400/20 text-xs px-2 py-1 h-8"
               >
-                <span>⚡</span>
+                <span className="text-sm">⚡</span>
                 <span className="hidden sm:inline">Highlights</span>
               </a>
             )}
             {game.boxscore_data && showScore && (
               <button
                 onClick={() => setIsBoxScoreOpen(true)}
-                className="btn-primary text-slate-200 hover:text-white bg-blue-500/10 hover:bg-blue-500/20 border-blue-400/20"
+                className="btn-primary text-slate-200 hover:text-white bg-blue-500/10 hover:bg-blue-500/20 border-blue-400/20 text-xs px-2 py-1 h-8"
               >
-                <span>📊</span>
+                <span className="text-sm">📊</span>
                 <span className="hidden sm:inline">Box Score</span>
               </button>
             )}
