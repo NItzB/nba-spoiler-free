@@ -215,65 +215,50 @@ export default function GameCard({ game, globalSpoilerVisible, rank }: GameCardP
           </div>
         )}
 
-        {/* Score + Actions row */}
-        <div className="flex items-center justify-between gap-2 mt-2">
-          {/* Score reveal */}
-          <div className="flex items-center gap-2">
-            {game.final_score && !globalSpoilerVisible ? (
-              <button
-                id={`reveal-score-${game.id}`}
-                onClick={() => setLocalSpoilerVisible(v => !v)}
-                className="btn-reveal bg-white/5 hover:bg-white/10"
-              >
-                {localSpoilerVisible ? '🙈 Hide' : '👁️ Score'}
-              </button>
-            ) : null}
+        {/* Score row */}
+        <div className="flex items-center justify-start gap-2 mt-2">
+          {game.final_score && !globalSpoilerVisible ? (
+            <button
+              id={`reveal-score-${game.id}`}
+              onClick={() => setLocalSpoilerVisible(v => !v)}
+              className="btn-reveal bg-white/5 hover:bg-white/10"
+            >
+              {localSpoilerVisible ? '🙈 Hide' : '👁️ Score'}
+            </button>
+          ) : null}
 
-            {game.final_score && (
-              <div
-                className={`
-                  flex flex-col items-start justify-center
-                  ${showScore ? 'spoiler-reveal' : 'spoiler-blur pointer-events-none select-none text-transparent'}
-                `}
-              >
-                <div className="text-lg font-black tracking-wide text-white leading-none">
-                  {game.final_score}
-                </div>
-                {game.series_summary && (
-                  <div className="text-[10px] font-bold text-slate-300 mt-1 uppercase tracking-wider bg-white/10 px-1.5 py-0.5 rounded">
-                    {game.series_summary}
-                  </div>
-                )}
+          {game.final_score && (
+            <div
+              className={`
+                flex flex-col items-start justify-center
+                ${showScore ? 'spoiler-reveal' : 'spoiler-blur pointer-events-none select-none text-transparent'}
+              `}
+            >
+              <div className="text-lg font-black tracking-wide text-white leading-none">
+                {game.final_score}
               </div>
-            )}
-          </div>
+              {game.series_summary && (
+                <div className="text-[10px] font-bold text-slate-300 mt-1 uppercase tracking-wider bg-white/10 px-1.5 py-0.5 rounded">
+                  {game.series_summary}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
 
-          {/* Action buttons */}
-          <div className="flex items-center gap-1 ml-auto">
-            {isCompleted && game.full_game_url && (
-              <a
-                id={`gamecast-${game.id}`}
-                href={game.full_game_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn-primary text-slate-200 hover:text-white text-xs px-2 py-1 h-8"
-              >
-                <span className="text-sm">📋</span>
-                <span className="hidden sm:inline">Gamecast</span>
-              </a>
-            )}
-            {isCompleted && game.highlights_url && (
-              <a
-                id={`highlights-${game.id}`}
-                href={game.highlights_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn-primary text-slate-200 hover:text-white bg-orange-500/10 hover:bg-orange-500/20 border-orange-400/20 text-xs px-2 py-1 h-8"
-              >
-                <span className="text-sm">⚡</span>
-                <span className="hidden sm:inline">Highlights</span>
-              </a>
-            )}
+        {/* Action buttons row */}
+        {isCompleted && (
+          <div className="flex items-center gap-1.5 mt-2">
+            <a
+              id={`highlights-${game.id}`}
+              href={`https://www.youtube.com/results?search_query=${encodeURIComponent(game.away_team + ' ' + game.home_team + ' NBA highlights')}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-primary text-slate-200 hover:text-white bg-red-500/10 hover:bg-red-500/20 border-red-400/20 text-xs px-2 py-1 h-8"
+            >
+              <span className="text-sm">▶</span>
+              <span className="hidden sm:inline">Watch Highlights</span>
+            </a>
             {game.boxscore_data && showScore && (
               <button
                 onClick={() => setIsBoxScoreOpen(true)}
@@ -284,7 +269,7 @@ export default function GameCard({ game, globalSpoilerVisible, rank }: GameCardP
               </button>
             )}
           </div>
-        </div>
+        )}
 
         {/* Modal */}
         <BoxScoreModal 
