@@ -2,6 +2,8 @@ import { format, formatDistanceToNow } from 'date-fns'
 import { useState } from 'react'
 import SpoilerToggle from './SpoilerToggle'
 
+export type ActivePage = 'games' | 'bracket'
+
 interface HeaderProps {
   selectedDate: string
   onDateChange: (date: string) => void
@@ -9,6 +11,8 @@ interface HeaderProps {
   onSpoilerToggle: () => void
   isUsingMockData: boolean
   lastSyncTime?: string | null
+  activePage: ActivePage
+  onPageChange: (page: ActivePage) => void
 }
 
 export default function Header({
@@ -18,6 +22,8 @@ export default function Header({
   onSpoilerToggle,
   isUsingMockData,
   lastSyncTime,
+  activePage,
+  onPageChange,
 }: HeaderProps) {
   const today = format(new Date(), 'yyyy-MM-dd')
   const [isSyncing, setIsSyncing] = useState(false)
@@ -109,14 +115,41 @@ export default function Header({
             </div>
           </div>
 
-          {/* Spoiler Toggle */}
-          <SpoilerToggle
-            spoilersVisible={spoilersVisible}
-            onToggle={onSpoilerToggle}
-          />
+          {/* Right side: tabs + spoiler toggle */}
+          <div className="flex items-center gap-2">
+            {/* Page tabs */}
+            <div className="flex items-center gap-1 bg-white/5 rounded-lg p-1 border border-white/8">
+              <button
+                onClick={() => onPageChange('games')}
+                className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${
+                  activePage === 'games'
+                    ? 'bg-orange-500/20 text-orange-300 border border-orange-400/30'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                🏀 Games
+              </button>
+              <button
+                onClick={() => onPageChange('bracket')}
+                className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${
+                  activePage === 'bracket'
+                    ? 'bg-yellow-500/20 text-yellow-300 border border-yellow-400/30'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                🏆 Bracket
+              </button>
+            </div>
+
+            <SpoilerToggle
+              spoilersVisible={spoilersVisible}
+              onToggle={onSpoilerToggle}
+            />
+          </div>
         </div>
 
-        {/* Date Navigation */}
+        {/* Date Navigation — only shown on games page */}
+        {activePage === 'games' && (
         <div className="flex items-center justify-center gap-3 mt-3">
           <button
             id="prev-day-btn"
@@ -163,9 +196,10 @@ export default function Header({
             ›
           </button>
         </div>
+        )}
 
-        {/* Mock data banner */}
-        {isUsingMockData && (
+        {/* Mock data banner — only relevant on games page */}
+        {activePage === 'games' && isUsingMockData && (
           <div className="mt-2 flex items-center justify-center gap-2 text-[11px] text-amber-400/80 font-medium">
             <span>⚡</span>
             <span>Demo mode — add your Supabase credentials to load real data</span>

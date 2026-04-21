@@ -326,16 +326,114 @@ def fetch_and_insert_for_date(target_date):
     except Exception as e:
         log(f"Failed to update database: {e}")
 
+def fetch_playoff_bracket():
+    """Fetch and store current NBA playoff bracket from ESPN v2 API"""
+    season = datetime.now().year
+    try:
+        url = "https://site.api.espn.com/apis/v2/sports/basketball/nba/playoffs"
+        resp = requests.get(url, timeout=15)
+        resp.raise_for_status()
+        data = resp.json()
+
+        log(f"Playoff API top-level keys: {list(data.keys())}")
+
+        series_payload = []
+
+        # ESPN v2 structure: full_rounds -> legs -> bracket_group -> series
+        full_rounds = data.get('full_rounds', data.get('rounds', []))
+
+        for rnd in full_rounds:
+            round_num = rnd.get('number', 0)
+            legs = rnd.get('legs', [])
+
+            for leg in legs:
+                conf_name = leg.get('name', '')
+                if 'east' in conf_name.lower():
+                    conference = 'East'
+                elif 'west' in conf_name.lower():
+                    conference = 'West'
+                else:
+                    conference = 'Finals'
+
+                bracket_group = leg.get('bracket_group', {})
+                for series in bracket_group.get('series', []):
+                    competitors = series.get('competitors', [])
+                    if len(competitors) < 2:
+                        continue
+
+                    c1, c2 = competitors[0], competitors[1]
+                    team1 = c1.get('team', {}).get('abbreviation')
+                    team2 = c2.get('team', {}).get('abbreviation')
+                    seed1 = (c1.get('seed') or {}).get('rank')
+                    seed2 = (c2.get('seed') or {}).get('rank')
+                    wins1 = int(c1.get('wins') or 0)
+                    wins2 = int(c2.get('wins') or 0)
+
+                    status_state = (series.get('status') or {}).get('type', {}).get('state', 'pre')
+
+                    winner = None
+                    if status_state == 'post':
+                        winner = team1 if wins1 > wins2 else team2
+
+                    last_game_date = None
+                    last_event_date = (series.get('lastEvent') or {}).get('date')
+                    if last_event_date:
+                        try:
+                            last_game_date = last_event_date[:10]
+                        except Exception:
+                            pass
+
+                    series_payload.append({
+                        "season": season,
+                        "conference": conference,
+                        "round": round_num,
+                        "series_id": series.get('uid') or series.get('id'),
+                        "team1": team1,
+                        "team2": team2,
+                        "seed1": seed1,
+                        "seed2": seed2,
+                        "wins1": wins1,
+                        "wins2": wins2,
+                        "status": status_state,
+                        "winner": winner,
+                        "last_game_date": last_game_date,
+                        "updated_at": datetime.now().isoformat()
+                    })
+                    log(f"Series: {team1}({wins1}) vs {team2}({wins2}) | {conference} R{round_num} | {status_state}")
+
+        if not series_payload:
+            log("No playoff series found — API structure may have changed.")
+            log(f"Raw sample: {str(data)[:500]}")
+            return
+
+        rest_url = f"{SUPABASE_URL}/rest/v1/playoff_series"
+        headers = {
+            "apikey": SERVICE_ROLE_KEY,
+            "Authorization": f"Bearer {SERVICE_ROLE_KEY}",
+            "Content-Type": "application/json",
+            "Prefer": "return=minimal"
+        }
+        requests.delete(f"{rest_url}?season=eq.{season}", headers=headers, timeout=15)
+        response = requests.post(rest_url, headers=headers, json=series_payload, timeout=15)
+        response.raise_for_status()
+        log(f"Playoff bracket updated: {len(series_payload)} series for {season}")
+
+    except Exception as e:
+        log(f"Error updating playoff bracket: {e}")
+
+
 def run():
     if not SERVICE_ROLE_KEY:
         log("ERROR: SUPABASE_DB_PASSWORD missing.")
         sys.exit(1)
-        
+
     utc_now = datetime.now()
     dates_to_check = [utc_now - timedelta(days=1), utc_now, utc_now + timedelta(days=1)]
-    
+
     for d in dates_to_check:
         fetch_and_insert_for_date(d)
+
+    fetch_playoff_bracket()
 
 if __name__ == "__main__":
     run()

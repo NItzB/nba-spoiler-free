@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { format } from 'date-fns'
-import Header from './components/Header'
+import Header, { ActivePage } from './components/Header'
 import GameGrid from './components/GameGrid'
+import BracketPage from './components/BracketPage'
 import SkeletonLoader from './components/SkeletonLoader'
 import EmptyState from './components/EmptyState'
 import { useGames } from './hooks/useGames'
@@ -26,6 +27,7 @@ function getTodayIsrael(): string {
 export default function App() {
   const [selectedDate, setSelectedDate] = useState(getTodayIsrael)
   const [spoilersVisible, setSpoilersVisible] = useState(false)
+  const [activePage, setActivePage] = useState<ActivePage>('games')
   const { games, loading, error, isUsingMockData, lastSyncTime } = useGames(selectedDate)
 
   return (
@@ -37,8 +39,15 @@ export default function App() {
         onSpoilerToggle={() => setSpoilersVisible(v => !v)}
         isUsingMockData={isUsingMockData}
         lastSyncTime={lastSyncTime}
+        activePage={activePage}
+        onPageChange={setActivePage}
       />
 
+      {activePage === 'bracket' && (
+        <BracketPage spoilersVisible={spoilersVisible} />
+      )}
+
+      {activePage === 'games' && (
       <main className="max-w-6xl mx-auto px-4 py-6">
         {/* Page title row */}
         <div className="flex items-center justify-between mb-6">
@@ -94,6 +103,7 @@ export default function App() {
           <GameGrid games={games} spoilersVisible={spoilersVisible} />
         )}
       </main>
+      )}
 
       {/* Footer */}
       <footer className="border-t border-white/5 mt-16 py-8 text-center text-xs text-slate-600">

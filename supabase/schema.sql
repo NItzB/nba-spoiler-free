@@ -41,3 +41,35 @@ CREATE POLICY "Allow authenticated inserts" ON nba_daily_ranks
 CREATE POLICY "Allow authenticated updates" ON nba_daily_ranks
   FOR UPDATE
   USING (auth.role() = 'service_role');
+
+-- ─── Playoff bracket table ────────────────────────────────────────────────────
+-- Run this migration in Supabase SQL editor to enable the bracket page
+
+CREATE TABLE IF NOT EXISTS playoff_series (
+  id             UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  season         INT NOT NULL,
+  conference     VARCHAR(10) NOT NULL,   -- 'East', 'West', 'Finals'
+  round          INT NOT NULL,           -- 1=First Round, 2=Semis, 3=Conf Finals, 4=Finals
+  series_id      VARCHAR(50),
+  team1          VARCHAR(3),             -- higher seed team abbreviation
+  team2          VARCHAR(3),             -- lower seed team abbreviation
+  seed1          INT,                    -- team1 seed number
+  seed2          INT,                    -- team2 seed number
+  wins1          INT NOT NULL DEFAULT 0,
+  wins2          INT NOT NULL DEFAULT 0,
+  status         VARCHAR(10) NOT NULL DEFAULT 'pre',  -- pre, in, post
+  winner         VARCHAR(3),
+  last_game_date DATE,                   -- most recent game date (for spoiler detection)
+  updated_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_playoff_series_season_round
+  ON playoff_series(season DESC, round ASC);
+
+ALTER TABLE playoff_series ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Allow public read playoff" ON playoff_series
+  FOR SELECT USING (true);
+
+CREATE POLICY "Allow service role write playoff" ON playoff_series
+  FOR ALL USING (auth.role() = 'service_role');
