@@ -257,7 +257,7 @@ export default function GameCard({ game, globalSpoilerVisible, rank }: GameCardP
               className="btn-primary text-slate-200 hover:text-white bg-red-500/10 hover:bg-red-500/20 border-red-400/20 text-xs px-2 py-1 h-8"
             >
               <span className="text-sm">▶</span>
-              <span className="hidden sm:inline">Watch Highlights</span>
+              <span>Watch Highlights</span>
             </a>
             {game.boxscore_data && showScore && (
               <button
@@ -265,7 +265,7 @@ export default function GameCard({ game, globalSpoilerVisible, rank }: GameCardP
                 className="btn-primary text-slate-200 hover:text-white bg-blue-500/10 hover:bg-blue-500/20 border-blue-400/20 text-xs px-2 py-1 h-8"
               >
                 <span className="text-sm">📊</span>
-                <span className="hidden sm:inline">Box Score</span>
+                <span>Box Score</span>
               </button>
             )}
           </div>
