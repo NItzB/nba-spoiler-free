@@ -263,9 +263,23 @@ def fetch_and_insert_for_date(target_date):
             live_clock = status.get('displayClock')
             live_period = status.get('period')
             
-            # Headlines/Recap
+            # Headlines/Recap + URLs
             headlines = competition.get('headlines', []) or event.get('headlines', [])
-            game_recap = headlines[0].get('shortLinkText') or headlines[0].get('description') if headlines else None
+            game_recap = headlines[0].get('description') if headlines else None
+
+            # Extract recap video URLs from headline links
+            highlights_url = None
+            full_game_url = None
+            if headlines and game_status == 'completed':
+                links = headlines[0].get('links', [])
+                for link in links:
+                    text_lower = (link.get('text') or '').lower()
+                    url = link.get('href')
+                    if url:
+                        if 'highlight' in text_lower:
+                            highlights_url = url
+                        elif 'full' in text_lower or 'game' in text_lower:
+                            full_game_url = url
 
             # Fetch Boxscore
             boxscore_data = None
@@ -294,6 +308,8 @@ def fetch_and_insert_for_date(target_date):
                 "away_leaders": away_leaders,
                 "home_line": home_line,
                 "away_line": away_line,
+                "highlights_url": highlights_url,
+                "full_game_url": full_game_url,
                 "boxscore_data": boxscore_data,
                 "created_at": datetime.now().isoformat(),
                 "updated_at": datetime.now().isoformat()

@@ -86,6 +86,7 @@ export default function GameCard({ game, globalSpoilerVisible, rank }: GameCardP
   }, [game]);
   const isSkip = tier === 'skip' && !isLive && !isScheduled
   const isMustWatch = tier === 'must-watch'
+  const isCompleted = game.status === 'completed'
   const israelTime = getIsraelTime(game.game_time_utc)
 
   return (
@@ -249,7 +250,7 @@ export default function GameCard({ game, globalSpoilerVisible, rank }: GameCardP
 
           {/* Action buttons */}
           <div className="flex items-center gap-1.5 ml-auto">
-            {game.full_game_url && (
+            {isCompleted && game.full_game_url && (
               <a
                 id={`watch-game-${game.id}`}
                 href={game.full_game_url}
@@ -261,7 +262,7 @@ export default function GameCard({ game, globalSpoilerVisible, rank }: GameCardP
                 <span className="hidden sm:inline">Full Game</span>
               </a>
             )}
-            {game.highlights_url && (
+            {isCompleted && game.highlights_url && (
               <a
                 id={`highlights-${game.id}`}
                 href={game.highlights_url}
