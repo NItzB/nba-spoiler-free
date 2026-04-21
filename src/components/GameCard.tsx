@@ -294,6 +294,8 @@ export default function GameCard({ game, globalSpoilerVisible, rank }: GameCardP
           winprobability_data={game.winprobability_data || []}
           home_team={game.home_team}
           away_team={game.away_team}
+          home_line={game.home_line}
+          away_line={game.away_line}
         />
 
         {/* Detailed Stats (Revealed) */}
