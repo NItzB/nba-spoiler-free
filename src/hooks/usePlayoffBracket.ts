@@ -58,13 +58,12 @@ export function usePlayoffBracket(): UsePlayoffBracketResult {
 
   const buildRounds = (conf: 'East' | 'West'): BracketRound[] => {
     const confSeries = allSeries.filter(s => s.conference === conf)
-    return [1, 2, 3]
-      .map(r => ({
-        round: r,
-        label: ROUND_LABELS[r],
-        series: confSeries.filter(s => s.round === r),
-      }))
-      .filter(r => r.series.length > 0)
+    // Always include all 3 rounds — empty rounds show TBD placeholders
+    return [1, 2, 3].map(r => ({
+      round: r,
+      label: ROUND_LABELS[r],
+      series: confSeries.filter(s => s.round === r),
+    }))
   }
 
   const lastUpdated = allSeries.length > 0

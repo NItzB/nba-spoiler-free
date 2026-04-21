@@ -89,20 +89,47 @@ function BracketSeriesCard({ series, spoilersVisible }: { series: PlayoffSeries;
   )
 }
 
+// How many series slots each round should show when TBD
+const ROUND_SLOT_COUNT: Record<number, number> = { 1: 4, 2: 2, 3: 1, 4: 1 }
+
+function TbdCard() {
+  return (
+    <div className="rounded-lg border border-white/5 bg-white/2 p-3 flex flex-col gap-1.5">
+      <div className="flex items-center gap-2 opacity-30">
+        <div className="w-5 h-5 rounded-full bg-white/10" />
+        <div className="h-3 bg-white/10 rounded flex-1" />
+        <div className="w-4 h-3 bg-white/10 rounded" />
+      </div>
+      <div className="border-t border-white/5" />
+      <div className="flex items-center gap-2 opacity-30">
+        <div className="w-5 h-5 rounded-full bg-white/10" />
+        <div className="h-3 bg-white/10 rounded flex-1" />
+        <div className="w-4 h-3 bg-white/10 rounded" />
+      </div>
+      <div className="border-t border-white/5 pt-1">
+        <div className="h-2 bg-white/5 rounded w-16 mx-auto" />
+      </div>
+    </div>
+  )
+}
+
 // ─── Round column with bracket connector lines ─────────────────────────────────
 
 function RoundColumn({
+  round,
   label,
   series,
   spoilersVisible,
   connectorSide = 'none',
 }: {
+  round: number
   label: string
   series: PlayoffSeries[]
   spoilersVisible: boolean
   connectorSide?: 'right' | 'left' | 'none'
 }) {
-  const count = series.length
+  const slotCount = series.length > 0 ? series.length : (ROUND_SLOT_COUNT[round] ?? 1)
+  const count = slotCount
   const showConnector = connectorSide !== 'none' && count > 1
   const connRight = connectorSide === 'right'
   const edgeOffset = connRight ? { right: -12 } : { left: -12 }
@@ -114,20 +141,30 @@ function RoundColumn({
       </p>
       {/* justify-around: ensures Semis/CF align perfectly with their R1 pairs */}
       <div className="flex-1 flex flex-col justify-around gap-2 relative">
-        {series.map((s) => {
-          const hasTick = showConnector
-          return (
-            <div key={s.id} className="relative">
-              <BracketSeriesCard series={s} spoilersVisible={spoilersVisible} />
-              {hasTick && (
-                <div
-                  className="absolute top-1/2 w-3 border-t border-white/15 -translate-y-px pointer-events-none"
-                  style={connRight ? { right: -12 } : { left: -12 }}
-                />
-              )}
-            </div>
-          )
-        })}
+        {series.length > 0
+          ? series.map((s) => (
+              <div key={s.id} className="relative">
+                <BracketSeriesCard series={s} spoilersVisible={spoilersVisible} />
+                {showConnector && (
+                  <div
+                    className="absolute top-1/2 w-3 border-t border-white/15 -translate-y-px pointer-events-none"
+                    style={connRight ? { right: -12 } : { left: -12 }}
+                  />
+                )}
+              </div>
+            ))
+          : Array.from({ length: count }).map((_, i) => (
+              <div key={i} className="relative">
+                <TbdCard />
+                {showConnector && (
+                  <div
+                    className="absolute top-1/2 w-3 border-t border-white/15 -translate-y-px pointer-events-none"
+                    style={connRight ? { right: -12 } : { left: -12 }}
+                  />
+                )}
+              </div>
+            ))
+        }
 
         {/* Vertical connector lines between paired series */}
         {showConnector && count === 4 && (
@@ -173,6 +210,7 @@ function ConferenceBracket({
           {ordered.map((r, idx) => (
             <RoundColumn
               key={r.round}
+              round={r.round}
               label={r.label}
               series={r.series}
               spoilersVisible={spoilersVisible}
@@ -215,7 +253,7 @@ export default function BracketPage({ spoilersVisible }: BracketPageProps) {
 
       {loading ? (
         <BracketSkeleton />
-      ) : (eastRounds.length === 0 && westRounds.length === 0 && !finals) ? (
+      ) : (eastRounds.every(r => r.series.length === 0) && westRounds.every(r => r.series.length === 0) && !finals) ? (
         <div className="text-center py-20 text-slate-500">
           <div className="text-4xl mb-3">🏆</div>
           <p className="text-lg font-bold text-slate-400 mb-1">Playoffs not started yet</p>
