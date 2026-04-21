@@ -281,11 +281,22 @@ def fetch_and_insert_for_date(target_date):
                         elif 'summary' in rel:
                             full_game_url = url
 
-            # Fetch Boxscore
+            # Fetch Boxscore and Probabilities
             boxscore_data = None
+            winprobability_data = None
             if game_status in ['in_progress', 'completed']:
-                log(f"Fetching boxscore for {event.get('id')}...")
-                boxscore_data = fetch_boxscore(event.get('id'))
+                game_id = event.get('id')
+                log(f"Fetching boxscore for {game_id}...")
+                boxscore_data = fetch_boxscore(game_id)
+
+                # Fetch win probability data from summary endpoint
+                try:
+                    summary_url = f"https://site.api.espn.com/apis/site/v2/sports/basketball/nba/summary?event={game_id}"
+                    summary_resp = requests.get(summary_url, timeout=10)
+                    summary_data = summary_resp.json()
+                    winprobability_data = summary_data.get('winprobability')
+                except Exception as e:
+                    log(f"Note: Could not fetch win probability for {game_id}: {e}")
 
             payload.append({
                 "date": db_date_str,
@@ -310,6 +321,7 @@ def fetch_and_insert_for_date(target_date):
                 "away_line": away_line,
                 "highlights_url": highlights_url,
                 "full_game_url": full_game_url,
+                "winprobability_data": winprobability_data,
                 "boxscore_data": boxscore_data,
                 "created_at": datetime.now().isoformat(),
                 "updated_at": datetime.now().isoformat()

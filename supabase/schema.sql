@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS nba_daily_ranks (
   highlights_url  TEXT,
   full_game_url   TEXT,
   game_time_utc   TIMESTAMPTZ,           -- Original game start time in UTC
+  winprobability_data JSONB,             -- Array of {homeWinPercentage, playId} from ESPN
   created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
