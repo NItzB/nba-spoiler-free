@@ -215,13 +215,13 @@ export default function GameCard({ game, globalSpoilerVisible, rank }: GameCardP
           </div>
         )}
 
-        {/* Score row */}
-        <div className="flex items-center justify-start gap-2 mt-2">
+        {/* Score row — centered with hide button on left */}
+        <div className="flex items-center justify-center gap-2 mt-2 relative">
           {game.final_score && !globalSpoilerVisible ? (
             <button
               id={`reveal-score-${game.id}`}
               onClick={() => setLocalSpoilerVisible(v => !v)}
-              className="btn-reveal bg-white/5 hover:bg-white/10"
+              className="btn-reveal bg-white/5 hover:bg-white/10 absolute left-0"
             >
               {localSpoilerVisible ? '🙈 Hide' : '👁️ Score'}
             </button>
@@ -230,7 +230,7 @@ export default function GameCard({ game, globalSpoilerVisible, rank }: GameCardP
           {game.final_score && (
             <div
               className={`
-                flex flex-col items-start justify-center
+                flex flex-col items-center justify-center
                 ${showScore ? 'spoiler-reveal' : 'spoiler-blur pointer-events-none select-none text-transparent'}
               `}
             >
