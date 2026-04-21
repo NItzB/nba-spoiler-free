@@ -261,14 +261,14 @@ export default function GameCard({ game, globalSpoilerVisible, rank }: GameCardP
             </a>
             {game.full_game_url && (
               <a
-                id={`espn-${game.id}`}
+                id={`stats-${game.id}`}
                 href={game.full_game_url}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="btn-primary text-slate-200 hover:text-white bg-slate-500/10 hover:bg-slate-500/20 border-slate-400/20 text-xs px-2 py-1 h-8"
               >
-                <span className="text-sm">🔗</span>
-                <span>ESPN</span>
+                <span className="text-sm">📈</span>
+                <span>Stats</span>
               </a>
             )}
             {game.boxscore_data && (
