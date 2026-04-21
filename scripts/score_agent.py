@@ -327,19 +327,22 @@ def fetch_and_insert_for_date(target_date):
         log(f"Failed to update database: {e}")
 
 def parse_series_headline(headline):
-    """Parse conference and round number from ESPN notes headline.
-    Examples: 'East 1st Round - Game 1', 'West Semifinals - Game 2',
-              'East Conference Finals - Game 1', 'NBA Finals - Game 3'
+    """Parse conference and round from ESPN notes headline.
+    Real formats observed:
+      R1: 'East 1st Round - Game 1'
+      R2: 'East Semifinals - Game 2'
+      R3: 'West Finals - Game 1'  (NOT 'Conference Finals')
+      R4: 'NBA Finals - Game 1'
     """
     h = headline.lower()
-    if 'nba finals' in h or ('finals' in h and 'conference' not in h and 'east' not in h and 'west' not in h):
+    if 'nba finals' in h:
         return 'Finals', 4
     conference = 'East' if 'east' in h else 'West'
     if '1st round' in h or 'first round' in h:
         round_num = 1
     elif 'semifinal' in h or 'second round' in h:
         round_num = 2
-    elif 'conference final' in h:
+    elif 'finals' in h:  # catches 'West Finals', 'East Finals', 'Conference Finals'
         round_num = 3
     else:
         round_num = 1
