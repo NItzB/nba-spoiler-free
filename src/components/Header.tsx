@@ -115,37 +115,32 @@ export default function Header({
             </div>
           </div>
 
-          {/* Right side: tabs + spoiler toggle */}
-          <div className="flex items-center gap-2">
-            {/* Page tabs */}
-            <div className="flex items-center gap-1 bg-white/5 rounded-lg p-1 border border-white/8">
-              <button
-                onClick={() => onPageChange('games')}
-                className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${
-                  activePage === 'games'
-                    ? 'bg-orange-500/20 text-orange-300 border border-orange-400/30'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                🏀 Games
-              </button>
-              <button
-                onClick={() => onPageChange('bracket')}
-                className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${
-                  activePage === 'bracket'
-                    ? 'bg-yellow-500/20 text-yellow-300 border border-yellow-400/30'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                🏆 Bracket
-              </button>
-            </div>
+          {/* Spoiler toggle */}
+          <SpoilerToggle spoilersVisible={spoilersVisible} onToggle={onSpoilerToggle} />
+        </div>
 
-            <SpoilerToggle
-              spoilersVisible={spoilersVisible}
-              onToggle={onSpoilerToggle}
-            />
-          </div>
+        {/* Second row: page tabs — centered, full width */}
+        <div className="flex items-center justify-center gap-1 mt-2 bg-white/5 rounded-lg p-1 border border-white/8 w-fit mx-auto">
+          <button
+            onClick={() => onPageChange('games')}
+            className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all ${
+              activePage === 'games'
+                ? 'bg-orange-500/20 text-orange-300 border border-orange-400/30'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            🏀 Games
+          </button>
+          <button
+            onClick={() => onPageChange('bracket')}
+            className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all ${
+              activePage === 'bracket'
+                ? 'bg-yellow-500/20 text-yellow-300 border border-yellow-400/30'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            🏆 Bracket
+          </button>
         </div>
 
         {/* Date Navigation — only shown on games page */}
