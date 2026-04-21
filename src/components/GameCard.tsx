@@ -247,7 +247,7 @@ export default function GameCard({ game, globalSpoilerVisible, rank }: GameCardP
         </div>
 
         {/* Action buttons row */}
-        {isCompleted && (
+        {isCompleted && showScore && (
           <div className="flex items-center gap-1.5 mt-2">
             <a
               id={`highlights-${game.id}`}
@@ -259,7 +259,7 @@ export default function GameCard({ game, globalSpoilerVisible, rank }: GameCardP
               <span className="text-sm">▶</span>
               <span>Watch Highlights</span>
             </a>
-            {game.boxscore_data && showScore && (
+            {game.boxscore_data && (
               <button
                 onClick={() => setIsBoxScoreOpen(true)}
                 className="btn-primary text-slate-200 hover:text-white bg-blue-500/10 hover:bg-blue-500/20 border-blue-400/20 text-xs px-2 py-1 h-8"
