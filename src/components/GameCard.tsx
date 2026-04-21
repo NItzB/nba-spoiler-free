@@ -5,7 +5,6 @@ import { Game } from '../types/game'
 import { getTeam, getTagInfo } from '../lib/teams'
 import ExcitementBadge, { getExcitementTier, TIER_CONFIG } from './ExcitementBadge'
 import BoxScoreModal from './BoxScoreModal'
-import GameProbabilitiesModal from './GameProbabilitiesModal'
 
 // Israel Standard Time / Daylight Time is UTC+2 / UTC+3
 // We'll dynamically compute it, but use a fixed offset for simplicity
@@ -65,7 +64,6 @@ function TeamDisplay({ abbr, side, record }: { abbr: string; side: 'home' | 'awa
 export default function GameCard({ game, globalSpoilerVisible, rank }: GameCardProps) {
   const [localSpoilerVisible, setLocalSpoilerVisible] = useState(false)
   const [isBoxScoreOpen, setIsBoxScoreOpen] = useState(false)
-  const [isProbabilitiesOpen, setIsProbabilitiesOpen] = useState(false)
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null)
   const tier = getExcitementTier(game.excitement_score)
   const tierConfig = TIER_CONFIG[tier]
@@ -261,15 +259,6 @@ export default function GameCard({ game, globalSpoilerVisible, rank }: GameCardP
               <span className="text-sm">▶</span>
               <span>Watch Highlights</span>
             </a>
-            {game.winprobability_data && game.winprobability_data.length > 0 && (
-              <button
-                onClick={() => setIsProbabilitiesOpen(true)}
-                className="btn-primary text-slate-200 hover:text-white bg-purple-500/10 hover:bg-purple-500/20 border-purple-400/20 text-xs px-2 py-1 h-8"
-              >
-                <span className="text-sm">📈</span>
-                <span>Probabilities</span>
-              </button>
-            )}
             {game.boxscore_data && (
               <button
                 onClick={() => setIsBoxScoreOpen(true)}
@@ -282,20 +271,11 @@ export default function GameCard({ game, globalSpoilerVisible, rank }: GameCardP
           </div>
         )}
 
-        {/* Modals */}
+        {/* Modal */}
         <BoxScoreModal
           isOpen={isBoxScoreOpen}
           onClose={() => setIsBoxScoreOpen(false)}
           data={game.boxscore_data}
-        />
-        <GameProbabilitiesModal
-          isOpen={isProbabilitiesOpen}
-          onClose={() => setIsProbabilitiesOpen(false)}
-          winprobability_data={game.winprobability_data || []}
-          home_team={game.home_team}
-          away_team={game.away_team}
-          home_line={game.home_line}
-          away_line={game.away_line}
         />
 
         {/* Detailed Stats (Revealed) */}
