@@ -1,0 +1,19 @@
+{
+  "name": "NBA Spoiler-Free",
+  "short_name": "NBA SF",
+  "description": "Spoiler-free NBA game ratings and Watchability Index for international fans.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0a0a1a",
+  "theme_color": "#0a0a1a",
+  "icons": [
+    {
+      "src": "./basketball.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
