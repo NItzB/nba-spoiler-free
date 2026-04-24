@@ -76,7 +76,6 @@ export default function SettingsModal({
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full bg-white/8 border border-white/15 text-slate-200 text-sm font-medium rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-transparent"
-                autoFocus
               />
             </div>
 
@@ -90,6 +89,7 @@ export default function SettingsModal({
                       onClick={() => {
                         onTimezoneChange(tz.name)
                         setSearchTerm('')
+                        onClose()
                       }}
                       className={`w-full text-left px-4 py-3 rounded-lg border transition-all ${
                         timezone === tz.name
