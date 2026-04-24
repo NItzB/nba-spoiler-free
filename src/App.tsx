@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { format } from 'date-fns'
 import Header, { ActivePage } from './components/Header'
 import GameGrid from './components/GameGrid'
@@ -6,6 +6,7 @@ import BracketPage from './components/BracketPage'
 import SkeletonLoader from './components/SkeletonLoader'
 import EmptyState from './components/EmptyState'
 import { useGames } from './hooks/useGames'
+import { getSystemTimezone } from './lib/timezones'
 
 // Default to today in Israel — we just use local format and let the hook deal with it
 function getTodayIsrael(): string {
@@ -28,7 +29,23 @@ export default function App() {
   const [selectedDate, setSelectedDate] = useState(getTodayIsrael)
   const [spoilersVisible, setSpoilersVisible] = useState(false)
   const [activePage, setActivePage] = useState<ActivePage>('games')
+  const [timezone, setTimezone] = useState(() => {
+    try {
+      return localStorage.getItem('selectedTimezone') || getSystemTimezone()
+    } catch {
+      return getSystemTimezone()
+    }
+  })
   const { games, loading, error, isUsingMockData, lastSyncTime } = useGames(selectedDate)
+
+  // Save timezone to localStorage when it changes
+  useEffect(() => {
+    try {
+      localStorage.setItem('selectedTimezone', timezone)
+    } catch {
+      // localStorage unavailable, silently fail
+    }
+  }, [timezone])
 
   return (
     <div className="min-h-screen bg-bg-primary">
@@ -41,6 +58,8 @@ export default function App() {
         lastSyncTime={lastSyncTime}
         activePage={activePage}
         onPageChange={setActivePage}
+        timezone={timezone}
+        onTimezoneChange={setTimezone}
       />
 
       {activePage === 'bracket' && (
@@ -100,7 +119,7 @@ export default function App() {
         ) : games.length === 0 ? (
           <EmptyState date={selectedDate} />
         ) : (
-          <GameGrid games={games} spoilersVisible={spoilersVisible} />
+          <GameGrid games={games} spoilersVisible={spoilersVisible} timezone={timezone} />
         )}
       </main>
       )}

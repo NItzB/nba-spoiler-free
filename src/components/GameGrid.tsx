@@ -4,9 +4,10 @@ import { Game } from '../types/game'
 interface GameGridProps {
   games: Game[]
   spoilersVisible: boolean
+  timezone: string
 }
 
-export default function GameGrid({ games, spoilersVisible }: GameGridProps) {
+export default function GameGrid({ games, spoilersVisible, timezone }: GameGridProps) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
       {games.map((game, index) => (
@@ -15,6 +16,7 @@ export default function GameGrid({ games, spoilersVisible }: GameGridProps) {
           game={game}
           globalSpoilerVisible={spoilersVisible}
           rank={index + 1}
+          timezone={timezone}
         />
       ))}
     </div>

@@ -1,6 +1,7 @@
 import { format, formatDistanceToNow } from 'date-fns'
 import { useState } from 'react'
 import SpoilerToggle from './SpoilerToggle'
+import SettingsModal from './SettingsModal'
 
 export type ActivePage = 'games' | 'bracket'
 
@@ -13,6 +14,8 @@ interface HeaderProps {
   lastSyncTime?: string | null
   activePage: ActivePage
   onPageChange: (page: ActivePage) => void
+  timezone: string
+  onTimezoneChange: (timezone: string) => void
 }
 
 export default function Header({
@@ -24,9 +27,12 @@ export default function Header({
   lastSyncTime,
   activePage,
   onPageChange,
+  timezone,
+  onTimezoneChange,
 }: HeaderProps) {
   const today = format(new Date(), 'yyyy-MM-dd')
   const [isSyncing, setIsSyncing] = useState(false)
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false)
 
   const handleForceSync = async () => {
     let token = localStorage.getItem('gh_pat')
@@ -115,8 +121,17 @@ export default function Header({
             </div>
           </div>
 
-          {/* Spoiler toggle */}
-          <SpoilerToggle spoilersVisible={spoilersVisible} onToggle={onSpoilerToggle} />
+          {/* Spoiler toggle + Settings */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setIsSettingsOpen(true)}
+              className="flex items-center justify-center w-10 h-10 rounded-lg bg-white/8 hover:bg-white/15 border border-white/10 hover:border-white/20 transition-all text-slate-300 hover:text-white"
+              title="Settings"
+            >
+              ⚙️
+            </button>
+            <SpoilerToggle spoilersVisible={spoilersVisible} onToggle={onSpoilerToggle} />
+          </div>
         </div>
 
         {/* Second row: page tabs — centered, full width */}
@@ -201,6 +216,13 @@ export default function Header({
           </div>
         )}
       </div>
+
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        timezone={timezone}
+        onTimezoneChange={onTimezoneChange}
+      />
     </header>
   )
 }

@@ -13,18 +13,19 @@ interface GameCardProps {
   game: Game
   globalSpoilerVisible: boolean
   rank: number
+  timezone: string
 }
 
-function getIsraelTime(utcString: string | null): string {
+function getGameTime(utcString: string | null, timezone: string): string {
   if (!utcString) return 'TBD'
   try {
     const date = parseISO(utcString)
     return date.toLocaleTimeString('en-US', {
-      timeZone: 'Asia/Jerusalem',
+      timeZone: timezone,
       hour: '2-digit',
       minute: '2-digit',
       hour12: false
-    }) + ' IL'
+    })
   } catch {
     return 'TBD'
   }
@@ -61,7 +62,7 @@ function TeamDisplay({ abbr, side, record }: { abbr: string; side: 'home' | 'awa
   )
 }
 
-export default function GameCard({ game, globalSpoilerVisible, rank }: GameCardProps) {
+export default function GameCard({ game, globalSpoilerVisible, rank, timezone }: GameCardProps) {
   const [localSpoilerVisible, setLocalSpoilerVisible] = useState(false)
   const [isBoxScoreOpen, setIsBoxScoreOpen] = useState(false)
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null)
@@ -87,7 +88,7 @@ export default function GameCard({ game, globalSpoilerVisible, rank }: GameCardP
   const isSkip = tier === 'skip' && !isLive && !isScheduled
   const isMustWatch = tier === 'must-watch'
   const isCompleted = game.status === 'completed'
-  const israelTime = getIsraelTime(game.game_time_utc)
+  const gameTime = getGameTime(game.game_time_utc, timezone)
 
   return (
     <div
@@ -161,7 +162,7 @@ export default function GameCard({ game, globalSpoilerVisible, rank }: GameCardP
 
             {/* Game time */}
             <div className="text-center">
-              <p className="text-[11px] text-slate-500 font-medium">🕐 {israelTime}</p>
+              <p className="text-[11px] text-slate-500 font-medium">🕐 {gameTime}</p>
             </div>
           </div>
 
