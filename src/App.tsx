@@ -127,7 +127,7 @@ export default function App() {
       {/* Footer */}
       <footer className="border-t border-white/5 mt-16 py-8 text-center text-xs text-slate-600">
         <p className="mb-1">
-          NBA Spoiler-Free Dashboard · DEBUG ACTIVE 🏀
+          NBA Spoiler-Free Dashboard 🏀
         </p>
         <p>
           NBA names and logos are property of NBA Properties, Inc. Not affiliated with or endorsed by the NBA.
