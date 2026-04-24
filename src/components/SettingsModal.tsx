@@ -127,7 +127,71 @@ export default function SettingsModal({
             </div>
           </div>
 
-          {/* Divider for future sections */}
+          {/* Divider */}
+          <div className="border-t border-white/10 my-8"></div>
+
+          {/* About Section */}
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-base sm:text-lg font-black text-white uppercase tracking-widest">ℹ️ About</h3>
+              <p className="text-sm text-slate-400 mt-2">How this site works</p>
+            </div>
+
+            <div className="space-y-3 text-sm text-slate-300 leading-relaxed">
+              <p>
+                <span className="text-white font-bold">NBA Spoiler-Free</span> shows you which of last
+                night's games are worth watching — without revealing the score.
+              </p>
+
+              <div className="bg-white/5 border border-white/10 rounded-lg p-4 space-y-2">
+                <p className="text-xs text-slate-400 uppercase font-bold tracking-wider">🏀 Watchability Index</p>
+                <p className="text-slate-300">
+                  Every game is rated on how fun it is to watch — based on how close
+                  the game was, how dramatic the finish was, the quality of the teams,
+                  and whether there was an upset.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="bg-white/5 border border-white/10 rounded-lg p-3">
+                  <p className="flex items-center gap-1.5 font-bold text-white">
+                    <span className="w-2 h-2 rounded-full bg-orange-500"></span> Must Watch
+                  </p>
+                  <p className="text-slate-400 mt-1">Instant classic — drop everything.</p>
+                </div>
+                <div className="bg-white/5 border border-white/10 rounded-lg p-3">
+                  <p className="flex items-center gap-1.5 font-bold text-white">
+                    <span className="w-2 h-2 rounded-full bg-blue-400"></span> Great
+                  </p>
+                  <p className="text-slate-400 mt-1">Worth your time.</p>
+                </div>
+                <div className="bg-white/5 border border-white/10 rounded-lg p-3">
+                  <p className="flex items-center gap-1.5 font-bold text-white">
+                    <span className="w-2 h-2 rounded-full bg-violet-400"></span> Decent
+                  </p>
+                  <p className="text-slate-400 mt-1">Fine if you have the time.</p>
+                </div>
+                <div className="bg-white/5 border border-white/10 rounded-lg p-3 opacity-70">
+                  <p className="flex items-center gap-1.5 font-bold text-white">
+                    <span className="w-2 h-2 rounded-full bg-slate-500"></span> Skip
+                  </p>
+                  <p className="text-slate-400 mt-1">Probably not worth it.</p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-xs text-slate-400 uppercase font-bold tracking-wider">How to use it</p>
+                <ul className="space-y-1.5 text-slate-300">
+                  <li>• Scores stay hidden until you toggle <span className="text-white font-bold">Spoilers ON</span>.</li>
+                  <li>• Tap a game for the box score, highlights link, and stats.</li>
+                  <li>• Use the date picker to browse past game days.</li>
+                  <li>• Ratings refresh automatically throughout the day.</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          {/* Divider */}
           <div className="border-t border-white/10 my-8"></div>
 
           {/* Future Settings Placeholder */}
