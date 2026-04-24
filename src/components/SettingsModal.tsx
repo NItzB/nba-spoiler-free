@@ -1,5 +1,5 @@
-import React, { useState } from 'react'
-import { TIMEZONES, formatTimezoneLabel } from '../lib/timezones'
+import { useState } from 'react'
+import { TIMEZONES } from '../lib/timezones'
 
 interface SettingsModalProps {
   isOpen: boolean
