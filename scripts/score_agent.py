@@ -239,14 +239,17 @@ def fetch_and_insert_for_date(target_date):
             tags = []
             final_score_str = f"{away_score}-{home_score}"
 
-            if game_status in ['completed', 'in_progress']:
+            if game_status == 'completed':
                 excitement_score, tags = calculate_excitement(
-                    home_score, away_score, is_ot, 
+                    home_score, away_score, is_ot,
                     leaders=all_points_leaders,
                     home_record=home_record, away_record=away_record
                 )
-                if game_status == 'in_progress':
-                    tags.append('Live')
+            elif game_status == 'in_progress':
+                # Watchability tags require the final score — partial-game numbers
+                # produce false positives like "Clutch Ending" in Q1.
+                excitement_score = 0
+                tags = ['Live']
             else:
                 tags = ['Upcoming']
                 final_score_str = None
