@@ -1,13 +1,19 @@
 name: NBA Score Agent
 
 on:
+  # Primary trigger: Supabase pg_cron fires a repository_dispatch when games end.
+  repository_dispatch:
+    types: [score-agent-trigger]
+  # Fallback only — once-daily safety net in case Supabase is unreachable.
   schedule:
-    # 04:00 UTC (07:00 IL) & 05:00 UTC (08:00 IL)
-    - cron: '0 4,5 * * *'
-    # 05:30 UTC (08:30 IL)
-    - cron: '30 5 * * *'
+    - cron: '0 6 * * *'   # 06:00 UTC = 09:00 IL
   workflow_dispatch:
     # Allows manual triggering from the GitHub Actions tab
+
+# Prevent overlapping runs (pg_cron has a cooldown but defense-in-depth).
+concurrency:
+  group: score-agent
+  cancel-in-progress: false
 
 jobs:
   update-scores:
@@ -15,17 +21,17 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-          
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          
+
       - name: Run Score Agent
         env:
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
