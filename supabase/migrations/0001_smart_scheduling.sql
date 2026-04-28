@@ -38,7 +38,7 @@ as $$
 declare
   v_pending_count int;
   v_last_trigger  timestamptz;
-  v_cooldown_min  int := 8;
+  v_cooldown_min  int := 4;
   v_gh_owner      text;
   v_gh_repo       text;
   v_gh_token      text;
@@ -106,6 +106,6 @@ end $$;
 
 select cron.schedule(
   'trigger-score-agent',
-  '* * * * *',
+  '*/2 * * * *',
   $$ select public.trigger_score_agent_if_needed(); $$
 );

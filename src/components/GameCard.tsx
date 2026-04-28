@@ -16,6 +16,21 @@ interface GameCardProps {
   timezone: string
 }
 
+function getLiveBadgeText(
+  period: number | null | undefined,
+  clock: string | null | undefined,
+  verbose = false
+): string {
+  if (!period) return verbose ? 'IN PROGRESS' : 'LIVE'
+  // End of regulation/OT with no time on the clock — game is finalizing.
+  if (period >= 4 && clock === '0.0') {
+    return verbose ? 'Game Ended · Finalizing…' : 'FINALIZING'
+  }
+  // Just the period — no clock time (kept short on purpose).
+  if (period <= 4) return `Q${period}`
+  return period === 5 ? 'OT' : `OT${period - 4}`
+}
+
 function getGameTime(utcString: string | null, timezone: string): string {
   if (!utcString) return 'TBD'
   try {
@@ -129,7 +144,7 @@ export default function GameCard({ game, globalSpoilerVisible, rank, timezone }:
       {isLive && (
         <div className="absolute top-3 left-3 px-2 py-0.5 rounded-full bg-red-500/20 border border-red-500/40 text-red-400 text-[10px] font-bold uppercase tracking-widest animate-pulse flex items-center gap-1.5">
           <div className="w-1.5 h-1.5 rounded-full bg-red-500 shadow-fire" />
-          {game.live_period && game.live_clock ? `Q${game.live_period} ${game.live_clock}` : 'LIVE'}
+          {getLiveBadgeText(game.live_period, game.live_clock)}
         </div>
       )}
 
@@ -150,7 +165,7 @@ export default function GameCard({ game, globalSpoilerVisible, rank, timezone }:
           <div className="flex flex-col items-center gap-2 flex-1 min-w-0">
             {isLive ? (
               <div className="text-sm font-black text-white px-3 py-1 bg-red-500/20 rounded-xl border border-red-500/30 whitespace-nowrap">
-                {game.live_period && game.live_clock ? `Q${game.live_period} ${game.live_clock}` : 'IN PROGRESS'}
+                {getLiveBadgeText(game.live_period, game.live_clock, true)}
               </div>
             ) : isScheduled ? (
               <div className="text-sm font-black text-amber-200 px-3 py-1 bg-amber-500/20 rounded-xl border border-amber-500/30 whitespace-nowrap">

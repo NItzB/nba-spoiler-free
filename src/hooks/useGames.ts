@@ -171,12 +171,9 @@ export function useGames(date: string): UseGamesResult {
       } catch (err) {
         if (!cancelled) {
           console.error('Supabase fetch error:', err)
-          setError('Failed to load games. Showing demo data.')
-          // Fall back to mock data
-          const today = format(new Date(), 'yyyy-MM-dd')
-          const filteredMock = date === today ? MOCK_GAMES : []
-          setGames(filteredMock)
-          setIsUsingMockData(true)
+          setError("Couldn't reach server. Pull to refresh.")
+          // Keep whatever games were already loaded — never replace real data
+          // with mock data on a transient error.
         }
       } finally {
         if (!cancelled) setLoading(false)
