@@ -125,12 +125,26 @@ export default function App() {
       )}
 
       {/* Footer */}
-      <footer className="border-t border-white/5 mt-16 py-8 text-center text-xs text-slate-600">
-        <p className="mb-1">
+      <footer className="border-t border-white/5 mt-16 py-8 px-4 text-center text-xs text-slate-600 max-w-3xl mx-auto leading-relaxed">
+        <p className="mb-2 font-semibold text-slate-500">
           NBA Spoiler-Free Dashboard 🏀
         </p>
+        <p className="mb-2">
+          Unofficial fan project. Not affiliated with, endorsed by, or sponsored by the NBA, ESPN, YouTube, or any team.
+          NBA team names and logos are trademarks of NBA Properties, Inc. Game data sourced from public APIs;
+          recap videos are embedded from YouTube (no video content is hosted on this site).
+        </p>
+        <p className="mb-2">
+          No personal data collected. Anonymous pageview stats via Cloudflare Web Analytics.
+        </p>
         <p>
-          NBA names and logos are property of NBA Properties, Inc. Not affiliated with or endorsed by the NBA.
+          Questions or takedown requests:{' '}
+          <a
+            href="mailto:nitz76@gmail.com"
+            className="text-slate-500 hover:text-slate-300 underline underline-offset-2"
+          >
+            nitz76@gmail.com
+          </a>
         </p>
       </footer>
     </div>
