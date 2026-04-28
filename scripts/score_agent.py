@@ -1,12 +1,36 @@
 import os
+import re
 import sys
 import json
+import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta
 import requests
 
 # Configuration
 SERVICE_ROLE_KEY = os.environ.get("SUPABASE_DB_PASSWORD") # user reused the same secret name
 SUPABASE_URL = "https://jffhhtbhecstgyhmiabn.supabase.co"
+
+# Motion Station YouTube channel — source of "Game Recap: …" videos.
+MOTION_STATION_CHANNEL_ID = "UCLd4dSmXdrJykO_hgOzbfPw"
+MOTION_STATION_RSS_URL = (
+    f"https://www.youtube.com/feeds/videos.xml?channel_id={MOTION_STATION_CHANNEL_ID}"
+)
+
+# ESPN abbr → team nickname (lowercase, as it appears in Motion Station titles).
+# Aliases (NY/SA/NO) are normalized before lookup.
+TEAM_NICKNAMES = {
+    "ATL": "hawks", "BOS": "celtics", "BKN": "nets", "CHA": "hornets", "CHI": "bulls",
+    "CLE": "cavaliers", "DAL": "mavericks", "DEN": "nuggets", "DET": "pistons",
+    "GSW": "warriors", "HOU": "rockets", "IND": "pacers", "LAC": "clippers",
+    "LAL": "lakers", "MEM": "grizzlies", "MIA": "heat", "MIL": "bucks",
+    "MIN": "timberwolves", "NOP": "pelicans", "NYK": "knicks", "OKC": "thunder",
+    "ORL": "magic", "PHI": "76ers", "PHX": "suns", "POR": "trail blazers",
+    "SAC": "kings", "SAS": "spurs", "TOR": "raptors", "UTA": "jazz", "WAS": "wizards",
+}
+ABBR_ALIASES = {"NY": "NYK", "SA": "SAS", "NO": "NOP"}
+
+def team_nickname(abbr):
+    return TEAM_NICKNAMES.get(ABBR_ALIASES.get(abbr, abbr), "").lower()
 
 def log(msg):
     print(f"[SCORE AGENT] {msg}", flush=True)
@@ -152,7 +176,53 @@ def calculate_excitement(home_score, away_score, is_ot, leaders=None, home_recor
     score = max(0.0, min(10.0, score))
     return round(score, 1), tags
 
-def fetch_and_insert_for_date(target_date):
+# ─── Motion Station YouTube recap matching ───────────────────────────────────
+# RSS returns the latest 15 uploads — fetched once per scraper run and reused
+# across all dates we process.
+RECAP_TITLE_RE = re.compile(r"^Game Recap:\s*(.+?)\s+(\d+),\s*(.+?)\s+(\d+)\s*$")
+
+def fetch_motion_station_recaps():
+    """Fetch latest videos from Motion Station and return parsed (teams,scores)→videoId.
+
+    Each entry is keyed by frozenset({team_nick_a, team_nick_b}, score_a, score_b)
+    so order doesn't matter when matching against our DB row.
+    """
+    try:
+        resp = requests.get(MOTION_STATION_RSS_URL, timeout=10)
+        resp.raise_for_status()
+        root = ET.fromstring(resp.content)
+    except Exception as e:
+        log(f"Motion Station RSS fetch failed: {e}")
+        return {}
+
+    ns = {"atom": "http://www.w3.org/2005/Atom", "yt": "http://www.youtube.com/xml/schemas/2015"}
+    matches = {}
+    for entry in root.findall("atom:entry", ns):
+        title_el = entry.find("atom:title", ns)
+        vid_el = entry.find("yt:videoId", ns)
+        if title_el is None or vid_el is None:
+            continue
+        m = RECAP_TITLE_RE.match(title_el.text or "")
+        if not m:
+            continue
+        team_a, score_a, team_b, score_b = m.group(1).lower(), int(m.group(2)), m.group(3).lower(), int(m.group(4))
+        key = (frozenset({team_a, team_b}), frozenset({score_a, score_b}))
+        matches[key] = vid_el.text
+    log(f"Motion Station: parsed {len(matches)} recap videos from RSS")
+    return matches
+
+def match_recap_video_id(recaps, away_abbr, home_abbr, away_score, home_score):
+    away_nick = team_nickname(away_abbr)
+    home_nick = team_nickname(home_abbr)
+    if not away_nick or not home_nick:
+        return None
+    key = (frozenset({away_nick, home_nick}), frozenset({away_score, home_score}))
+    return recaps.get(key)
+
+
+def fetch_and_insert_for_date(target_date, recaps=None):
+    if recaps is None:
+        recaps = {}
     date_str = target_date.strftime('%Y%m%d')
     db_date_str = target_date.strftime('%Y-%m-%d')
     
@@ -273,6 +343,7 @@ def fetch_and_insert_for_date(target_date):
             # Extract video URLs from event links (only for completed games)
             highlights_url = None
             full_game_url = None
+            recap_video_id = None
             if game_status == 'completed':
                 event_links = event.get('links', [])
                 for link in event_links:
@@ -283,6 +354,9 @@ def fetch_and_insert_for_date(target_date):
                             highlights_url = url
                         elif 'summary' in rel:
                             full_game_url = url
+                recap_video_id = match_recap_video_id(
+                    recaps, away_team, home_team, away_score, home_score
+                )
 
             # Fetch Boxscore and Probabilities
             boxscore_data = None
@@ -324,6 +398,7 @@ def fetch_and_insert_for_date(target_date):
                 "away_line": away_line,
                 "highlights_url": highlights_url,
                 "full_game_url": full_game_url,
+                "recap_video_id": recap_video_id,
                 "winprobability_data": winprobability_data,
                 "boxscore_data": boxscore_data,
                 "created_at": datetime.now().isoformat(),
@@ -502,8 +577,10 @@ def run():
     utc_now = datetime.now()
     dates_to_check = [utc_now - timedelta(days=1), utc_now, utc_now + timedelta(days=1)]
 
+    recaps = fetch_motion_station_recaps()
+
     for d in dates_to_check:
-        fetch_and_insert_for_date(d)
+        fetch_and_insert_for_date(d, recaps=recaps)
 
     fetch_playoff_bracket()
 

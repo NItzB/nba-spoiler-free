@@ -5,6 +5,7 @@ import { Game } from '../types/game'
 import { getTeam, getTagInfo } from '../lib/teams'
 import ExcitementBadge, { getExcitementTier, TIER_CONFIG } from './ExcitementBadge'
 import BoxScoreModal from './BoxScoreModal'
+import VideoModal from './VideoModal'
 
 // Israel Standard Time / Daylight Time is UTC+2 / UTC+3
 // We'll dynamically compute it, but use a fixed offset for simplicity
@@ -80,6 +81,7 @@ function TeamDisplay({ abbr, side, record }: { abbr: string; side: 'home' | 'awa
 export default function GameCard({ game, globalSpoilerVisible, rank, timezone }: GameCardProps) {
   const [localSpoilerVisible, setLocalSpoilerVisible] = useState(false)
   const [isBoxScoreOpen, setIsBoxScoreOpen] = useState(false)
+  const [isVideoOpen, setIsVideoOpen] = useState(false)
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null)
   const tier = getExcitementTier(game.excitement_score)
   const tierConfig = TIER_CONFIG[tier]
@@ -265,16 +267,27 @@ export default function GameCard({ game, globalSpoilerVisible, rank, timezone }:
         {/* Action buttons row */}
         {isCompleted && showScore && (
           <div className="flex items-center gap-1.5 mt-2">
-            <a
-              id={`highlights-${game.id}`}
-              href={`https://www.youtube.com/results?search_query=${encodeURIComponent(game.away_team + ' ' + game.home_team + ' NBA highlights')}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn-primary text-slate-200 hover:text-white bg-red-500/10 hover:bg-red-500/20 border-red-400/20 text-xs px-2 py-1 h-8"
-            >
-              <span className="text-sm">▶</span>
-              <span>Watch Highlights</span>
-            </a>
+            {game.recap_video_id ? (
+              <button
+                id={`highlights-${game.id}`}
+                onClick={() => setIsVideoOpen(true)}
+                className="btn-primary text-slate-200 hover:text-white bg-red-500/10 hover:bg-red-500/20 border-red-400/20 text-xs px-2 py-1 h-8"
+              >
+                <span className="text-sm">▶</span>
+                <span>Watch Recap</span>
+              </button>
+            ) : (
+              <a
+                id={`highlights-${game.id}`}
+                href={`https://www.youtube.com/results?search_query=${encodeURIComponent(game.away_team + ' ' + game.home_team + ' NBA highlights')}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn-primary text-slate-200 hover:text-white bg-red-500/10 hover:bg-red-500/20 border-red-400/20 text-xs px-2 py-1 h-8"
+              >
+                <span className="text-sm">▶</span>
+                <span>Watch Highlights</span>
+              </a>
+            )}
             {game.full_game_url && (
               <a
                 id={`stats-${game.id}`}
@@ -304,6 +317,13 @@ export default function GameCard({ game, globalSpoilerVisible, rank, timezone }:
           isOpen={isBoxScoreOpen}
           onClose={() => setIsBoxScoreOpen(false)}
           data={game.boxscore_data}
+        />
+
+        <VideoModal
+          isOpen={isVideoOpen}
+          onClose={() => setIsVideoOpen(false)}
+          videoId={game.recap_video_id || null}
+          title={`${getTeam(game.away_team).name} @ ${getTeam(game.home_team).name} — Recap`}
         />
 
         {/* Detailed Stats (Revealed) */}

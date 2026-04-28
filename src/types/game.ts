@@ -9,6 +9,7 @@ export interface Game {
   is_overtime: boolean;
   highlights_url: string | null;
   full_game_url: string | null;
+  recap_video_id?: string | null;
   game_time_utc: string | null;
   status?: string;
   series_summary?: string | null;
