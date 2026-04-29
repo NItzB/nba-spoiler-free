@@ -66,7 +66,7 @@ function TeamColumn({ abbr, record }: { abbr: string; record?: string }) {
   const Logo = (NBAIcons as Record<string, React.ComponentType<{ size?: number }>>)[team.abbreviation]
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, width: 280 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: 280 }}>
       <div
         style={{
           width: LOGO_SIZE,
@@ -75,36 +75,41 @@ function TeamColumn({ abbr, record }: { abbr: string; record?: string }) {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
+          overflow: 'hidden',
+          flexShrink: 0,
         }}
       >
         {/* Invisible-by-default abbr fallback — only visible if html2canvas drops the SVG */}
         <span
           style={{
             position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
             fontSize: 56,
             fontWeight: 900,
             color: team.primaryColor,
-            opacity: 0.5,
+            opacity: 0.4,
             letterSpacing: '-0.02em',
           }}
         >
           {team.abbreviation}
         </span>
         {Logo && (
-          <div style={{ position: 'relative', zIndex: 1 }}>
+          <div style={{ position: 'relative', zIndex: 1, lineHeight: 0 }}>
             <Logo size={LOGO_SIZE} />
           </div>
         )}
       </div>
-      <div style={{ textAlign: 'center' }}>
+      <div style={{ textAlign: 'center', marginTop: 20 }}>
         <div style={{ fontSize: 22, fontWeight: 500, color: '#94a3b8', lineHeight: 1.1 }}>
           {team.city}
         </div>
-        <div style={{ fontSize: 38, fontWeight: 700, color: '#ffffff', letterSpacing: '-0.01em', lineHeight: 1.1, marginTop: 2 }}>
+        <div style={{ fontSize: 38, fontWeight: 700, color: '#ffffff', letterSpacing: '-0.01em', lineHeight: 1.1, marginTop: 4 }}>
           {team.name}
         </div>
         {record && (
-          <div style={{ fontSize: 18, fontWeight: 700, color: '#64748b', marginTop: 6 }}>
+          <div style={{ fontSize: 18, fontWeight: 700, color: '#64748b', marginTop: 8 }}>
             {record}
           </div>
         )}
@@ -127,16 +132,18 @@ function ExcitementCircle({ score, tier }: { score: number; tier: keyof typeof T
           alignItems: 'center',
           justifyContent: 'center',
           boxShadow: `0 0 0 3px ${visual.accent}55, 0 8px 32px ${visual.accent}40`,
+          lineHeight: 0,
         }}
       >
         <span
           style={{
-            fontSize: 56,
+            fontSize: 52,
             fontWeight: 900,
             color: '#ffffff',
-            letterSpacing: '-0.04em',
             fontVariantNumeric: 'tabular-nums',
             lineHeight: 1,
+            display: 'block',
+            textAlign: 'center',
           }}
         >
           {score.toFixed(1)}
@@ -144,15 +151,19 @@ function ExcitementCircle({ score, tier }: { score: number; tier: keyof typeof T
       </div>
       <div
         style={{
-          padding: '5px 16px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '5px 18px',
           borderRadius: 999,
           background: `${visual.accent}26`,
           border: `1px solid ${visual.accent}55`,
           color: '#ffffff',
-          fontSize: 14,
+          fontSize: 13,
           fontWeight: 700,
-          letterSpacing: '0.16em',
+          letterSpacing: '0.14em',
           textTransform: 'uppercase',
+          textIndent: '0.14em',
         }}
       >
         {visual.label}
@@ -221,6 +232,9 @@ const ShareCard = forwardRef<HTMLDivElement, ShareCardProps>(({ game, variant },
               position: 'absolute',
               top: 24,
               right: 24,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
               padding: '5px 14px',
               borderRadius: 999,
               background: 'rgba(167, 139, 250, 0.18)',
@@ -229,6 +243,7 @@ const ShareCard = forwardRef<HTMLDivElement, ShareCardProps>(({ game, variant },
               fontSize: 13,
               fontWeight: 800,
               letterSpacing: '0.18em',
+              textIndent: '0.18em',
               zIndex: 3,
             }}
           >
@@ -316,7 +331,10 @@ const ShareCard = forwardRef<HTMLDivElement, ShareCardProps>(({ game, variant },
               {game.series_summary && (
                 <div
                   style={{
-                    padding: '3px 10px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '3px 12px',
                     borderRadius: 6,
                     background: 'rgba(255,255,255,0.1)',
                     color: '#cbd5e1',
@@ -324,6 +342,7 @@ const ShareCard = forwardRef<HTMLDivElement, ShareCardProps>(({ game, variant },
                     fontWeight: 800,
                     letterSpacing: '0.16em',
                     textTransform: 'uppercase',
+                    textIndent: '0.16em',
                   }}
                 >
                   {game.series_summary}
