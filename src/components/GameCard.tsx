@@ -1,11 +1,27 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import * as NBAIcons from 'react-nba-logos'
 import { parseISO } from 'date-fns'
+import html2canvas from 'html2canvas'
 import { Game } from '../types/game'
 import { getTeam, getTagInfo } from '../lib/teams'
 import ExcitementBadge, { getExcitementTier, TIER_CONFIG } from './ExcitementBadge'
 import BoxScoreModal from './BoxScoreModal'
 import VideoModal from './VideoModal'
+import ShareCard from './ShareCard'
+import ShareModal from './ShareModal'
+
+const SITE_URL = 'https://nitzb.github.io/nba-spoiler-free/'
+
+type ShareVariant = 'spoiler-free' | 'spoiler-shown'
+
+function buildShareText(game: Game, variant: ShareVariant): string {
+  const away = getTeam(game.away_team)
+  const home = getTeam(game.home_team)
+  if (variant === 'spoiler-shown' && game.final_score) {
+    return `${away.name} @ ${home.name} — ${game.final_score}. Watchability ${game.excitement_score.toFixed(1)}/10. Rated on NBA Spoiler-Free.`
+  }
+  return `${away.name} @ ${home.name} — score hidden. Watchability ${game.excitement_score.toFixed(1)}/10. Pick your watch on NBA Spoiler-Free.`
+}
 
 // Israel Standard Time / Daylight Time is UTC+2 / UTC+3
 // We'll dynamically compute it, but use a fixed offset for simplicity
@@ -83,6 +99,11 @@ export default function GameCard({ game, globalSpoilerVisible, rank, timezone }:
   const [isBoxScoreOpen, setIsBoxScoreOpen] = useState(false)
   const [isVideoOpen, setIsVideoOpen] = useState(false)
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null)
+  const [shareVariant, setShareVariant] = useState<ShareVariant>('spoiler-free')
+  const [isSharing, setIsSharing] = useState(false)
+  const [shareImage, setShareImage] = useState<string | null>(null)
+  const [shareModalOpen, setShareModalOpen] = useState(false)
+  const shareCardRef = useRef<HTMLDivElement>(null)
   const tier = getExcitementTier(game.excitement_score)
   const tierConfig = TIER_CONFIG[tier]
   const showScore = globalSpoilerVisible || localSpoilerVisible
@@ -102,6 +123,51 @@ export default function GameCard({ game, globalSpoilerVisible, rank, timezone }:
       console.log(`[DEBUG] Game ${game.id} tags:`, game.tags);
     }
   }, [game]);
+
+  const handleShare = async (variant: ShareVariant) => {
+    if (isSharing) return
+    setIsSharing(true)
+    try {
+      setShareVariant(variant)
+      // Wait two frames so the offscreen ShareCard re-renders with the new variant.
+      await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))
+      try { await document.fonts.ready } catch { /* ignore */ }
+
+      const node = shareCardRef.current
+      if (!node) return
+
+      const canvas = await html2canvas(node, {
+        scale: 2,
+        backgroundColor: null,
+        useCORS: true,
+        logging: false,
+      })
+
+      const text = buildShareText(game, variant)
+      const fileName = `${game.away_team}-${game.home_team}-${variant}.png`
+
+      const blob: Blob | null = await new Promise(r => canvas.toBlob(b => r(b), 'image/png'))
+      if (blob) {
+        const file = new File([blob], fileName, { type: 'image/png' })
+        const nav = navigator as Navigator & { canShare?: (data: ShareData) => boolean }
+        if (nav.canShare && nav.canShare({ files: [file] }) && nav.share) {
+          try {
+            await nav.share({ files: [file], title: 'NBA Spoiler-Free', text, url: SITE_URL })
+            return
+          } catch (err) {
+            // User cancelled or share failed — fall through to modal.
+            if ((err as Error)?.name === 'AbortError') return
+          }
+        }
+      }
+
+      setShareImage(canvas.toDataURL('image/png'))
+      setShareModalOpen(true)
+    } finally {
+      setIsSharing(false)
+    }
+  }
+
   const isSkip = tier === 'skip' && !isLive && !isScheduled
   const isMustWatch = tier === 'must-watch'
   const isCompleted = game.status === 'completed'
@@ -233,7 +299,7 @@ export default function GameCard({ game, globalSpoilerVisible, rank, timezone }:
           </div>
         )}
 
-        {/* Score row — centered with hide button on left */}
+        {/* Score row — centered with hide button on left, share on right */}
         <div className="flex items-center justify-center gap-2 mt-2 relative">
           {game.final_score && !globalSpoilerVisible ? (
             <button
@@ -244,6 +310,17 @@ export default function GameCard({ game, globalSpoilerVisible, rank, timezone }:
               {localSpoilerVisible ? '🙈 Hide' : '👁️ Score'}
             </button>
           ) : null}
+
+          {isCompleted && !showScore && (
+            <button
+              onClick={() => handleShare('spoiler-free')}
+              disabled={isSharing}
+              aria-label="Share without spoilers"
+              className="btn-reveal bg-white/5 hover:bg-white/10 absolute right-0 disabled:opacity-50"
+            >
+              {isSharing ? '…' : '🔒 Share'}
+            </button>
+          )}
 
           {game.final_score && (
             <div
@@ -309,6 +386,14 @@ export default function GameCard({ game, globalSpoilerVisible, rank, timezone }:
                 <span>Box Score</span>
               </button>
             )}
+            <button
+              onClick={() => handleShare('spoiler-shown')}
+              disabled={isSharing}
+              className="btn-primary text-slate-200 hover:text-white bg-emerald-500/10 hover:bg-emerald-500/20 border-emerald-400/20 text-xs px-2 py-1 h-8 disabled:opacity-50"
+            >
+              <span className="text-sm">📣</span>
+              <span>{isSharing ? 'Preparing…' : 'Share'}</span>
+            </button>
           </div>
         )}
 
@@ -325,6 +410,32 @@ export default function GameCard({ game, globalSpoilerVisible, rank, timezone }:
           videoId={game.recap_video_id || null}
           title={`${getTeam(game.away_team).name} @ ${getTeam(game.home_team).name} — Recap`}
         />
+
+        {isCompleted && (
+          <>
+            {/* Offscreen ShareCard — must be in the DOM for html2canvas to snapshot */}
+            <div
+              aria-hidden
+              style={{
+                position: 'fixed',
+                top: -10000,
+                left: -10000,
+                pointerEvents: 'none',
+                opacity: 0,
+              }}
+            >
+              <ShareCard ref={shareCardRef} game={game} variant={shareVariant} />
+            </div>
+            <ShareModal
+              isOpen={shareModalOpen}
+              onClose={() => setShareModalOpen(false)}
+              imageDataUrl={shareImage}
+              shareText={buildShareText(game, shareVariant)}
+              shareUrl={SITE_URL}
+              fileName={`${game.away_team}-${game.home_team}-${shareVariant}.png`}
+            />
+          </>
+        )}
 
         {/* Detailed Stats (Revealed) */}
         {showScore && (
