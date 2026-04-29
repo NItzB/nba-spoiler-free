@@ -149,8 +149,14 @@ export default function GameCard({ game, globalSpoilerVisible, rank, timezone }:
       const blob: Blob | null = await new Promise(r => canvas.toBlob(b => r(b), 'image/png'))
       if (blob) {
         const file = new File([blob], fileName, { type: 'image/png' })
-        const nav = navigator as Navigator & { canShare?: (data: ShareData) => boolean }
-        if (nav.canShare && nav.canShare({ files: [file] }) && nav.share) {
+        const nav = navigator as Navigator & {
+          canShare?: (data: ShareData) => boolean
+          userAgentData?: { mobile?: boolean }
+        }
+        // Only use the native share sheet on mobile — on desktop it's less useful
+        // than our modal (no Twitter/Bluesky/WhatsApp shortcuts).
+        const isMobile = nav.userAgentData?.mobile ?? window.matchMedia('(pointer: coarse)').matches
+        if (isMobile && nav.canShare && nav.canShare({ files: [file] }) && nav.share) {
           try {
             await nav.share({ files: [file], title: 'NBA Spoiler-Free', text, url: SITE_URL })
             return
