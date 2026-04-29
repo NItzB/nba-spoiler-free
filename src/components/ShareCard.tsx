@@ -10,46 +10,34 @@ interface ShareCardProps {
   variant: 'spoiler-free' | 'spoiler-shown'
 }
 
+// Match TIER_CONFIG / accent colors from tailwind.config.js
 const TIER_VISUAL = {
   'must-watch': {
-    label: 'MUST WATCH',
-    accent: '#f97316',
-    accentSoft: 'rgba(249, 115, 22, 0.4)',
-    accentBorder: 'rgba(249, 115, 22, 0.5)',
-    gradient: 'linear-gradient(135deg, #f97316 0%, #ef4444 100%)',
-    glow: 'rgba(249, 115, 22, 0.4)',
+    label: '🔥 Must Watch',
+    accent: '#ff6b35',
+    gradient: 'linear-gradient(135deg, #f97316 0%, #ef4444 50%, #f97316 100%)',
     tagline: "Don't miss this one.",
   },
   'great': {
-    label: 'GREAT GAME',
-    accent: '#60a5fa',
-    accentSoft: 'rgba(96, 165, 250, 0.35)',
-    accentBorder: 'rgba(96, 165, 250, 0.5)',
+    label: '⭐ Great Game',
+    accent: '#4a9eff',
     gradient: 'linear-gradient(135deg, #3b82f6 0%, #06b6d4 100%)',
-    glow: 'rgba(96, 165, 250, 0.35)',
     tagline: 'Worth your evening.',
   },
   'decent': {
-    label: 'DECENT',
+    label: '👍 Decent',
     accent: '#a78bfa',
-    accentSoft: 'rgba(167, 139, 250, 0.3)',
-    accentBorder: 'rgba(167, 139, 250, 0.45)',
     gradient: 'linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%)',
-    glow: 'rgba(167, 139, 250, 0.3)',
     tagline: 'Solid pick.',
   },
   'skip': {
-    label: 'SKIP IT',
-    accent: '#94a3b8',
-    accentSoft: 'rgba(148, 163, 184, 0.25)',
-    accentBorder: 'rgba(148, 163, 184, 0.4)',
+    label: '💤 Skip it',
+    accent: '#475569',
     gradient: 'linear-gradient(135deg, #475569 0%, #64748b 100%)',
-    glow: 'rgba(148, 163, 184, 0.25)',
     tagline: 'Save your time.',
   },
 } as const
 
-// Tags that reveal the result/score and must NOT be shown on the spoiler-free card.
 const SPOILER_TAGS = new Set([
   'High Scoring',
   'Defensive Battle',
@@ -71,7 +59,7 @@ function filterTagsForVariant(tags: string[], variant: 'spoiler-free' | 'spoiler
   return tags.filter(t => !SPOILER_TAGS.has(t))
 }
 
-const LOGO_SIZE = 140
+const LOGO_SIZE = 150
 
 function TeamColumn({ abbr, record }: { abbr: string; record?: string }) {
   const team = getTeam(abbr)
@@ -79,7 +67,6 @@ function TeamColumn({ abbr, record }: { abbr: string; record?: string }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, width: 280 }}>
-      {/* Logo with colored fallback ring behind in case SVG fails to capture */}
       <div
         style={{
           width: LOGO_SIZE,
@@ -88,19 +75,16 @@ function TeamColumn({ abbr, record }: { abbr: string; record?: string }) {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          borderRadius: '50%',
-          background: `linear-gradient(135deg, ${team.primaryColor}33 0%, ${team.primaryColor}11 100%)`,
-          border: `2px solid ${team.primaryColor}66`,
         }}
       >
-        {/* Fallback abbr always rendered behind logo — visible only if logo fails */}
+        {/* Invisible-by-default abbr fallback — only visible if html2canvas drops the SVG */}
         <span
           style={{
             position: 'absolute',
-            fontSize: 44,
+            fontSize: 56,
             fontWeight: 900,
             color: team.primaryColor,
-            opacity: 0.85,
+            opacity: 0.5,
             letterSpacing: '-0.02em',
           }}
         >
@@ -108,22 +92,70 @@ function TeamColumn({ abbr, record }: { abbr: string; record?: string }) {
         </span>
         {Logo && (
           <div style={{ position: 'relative', zIndex: 1 }}>
-            <Logo size={LOGO_SIZE - 12} />
+            <Logo size={LOGO_SIZE} />
           </div>
         )}
       </div>
-      <div style={{ textAlign: 'center', height: 90 }}>
-        <div style={{ fontSize: 22, fontWeight: 600, color: '#cbd5e1', lineHeight: 1.1 }}>
+      <div style={{ textAlign: 'center' }}>
+        <div style={{ fontSize: 22, fontWeight: 500, color: '#94a3b8', lineHeight: 1.1 }}>
           {team.city}
         </div>
-        <div style={{ fontSize: 38, fontWeight: 800, color: '#ffffff', letterSpacing: '-0.02em', lineHeight: 1.1, marginTop: 2 }}>
-          {team.name.toUpperCase()}
+        <div style={{ fontSize: 38, fontWeight: 700, color: '#ffffff', letterSpacing: '-0.01em', lineHeight: 1.1, marginTop: 2 }}>
+          {team.name}
         </div>
         {record && (
-          <div style={{ fontSize: 18, fontWeight: 500, color: '#64748b', marginTop: 4 }}>
+          <div style={{ fontSize: 18, fontWeight: 700, color: '#64748b', marginTop: 6 }}>
             {record}
           </div>
         )}
+      </div>
+    </div>
+  )
+}
+
+function ExcitementCircle({ score, tier }: { score: number; tier: keyof typeof TIER_VISUAL }) {
+  const visual = TIER_VISUAL[tier]
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+      <div
+        style={{
+          width: 130,
+          height: 130,
+          borderRadius: '50%',
+          background: visual.gradient,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          boxShadow: `0 0 0 3px ${visual.accent}55, 0 8px 32px ${visual.accent}40`,
+        }}
+      >
+        <span
+          style={{
+            fontSize: 56,
+            fontWeight: 900,
+            color: '#ffffff',
+            letterSpacing: '-0.04em',
+            fontVariantNumeric: 'tabular-nums',
+            lineHeight: 1,
+          }}
+        >
+          {score.toFixed(1)}
+        </span>
+      </div>
+      <div
+        style={{
+          padding: '5px 16px',
+          borderRadius: 999,
+          background: `${visual.accent}26`,
+          border: `1px solid ${visual.accent}55`,
+          color: '#ffffff',
+          fontSize: 14,
+          fontWeight: 700,
+          letterSpacing: '0.16em',
+          textTransform: 'uppercase',
+        }}
+      >
+        {visual.label}
       </div>
     </div>
   )
@@ -149,312 +181,253 @@ const ShareCard = forwardRef<HTMLDivElement, ShareCardProps>(({ game, variant },
         width: 1200,
         height: 630,
         position: 'relative',
-        background: 'radial-gradient(ellipse at top, #1e293b 0%, #0f172a 60%, #020617 100%)',
+        background: '#0a0a1a',
         fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
         overflow: 'hidden',
         boxSizing: 'border-box',
+        padding: 28,
       }}
     >
-      {/* Top accent bar */}
-      <div
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          height: 6,
-          background: visual.gradient,
-          zIndex: 3,
-        }}
-      />
-
-      {/* Tier glow */}
-      <div
-        style={{
-          position: 'absolute',
-          top: -200,
-          left: '50%',
-          transform: 'translateX(-50%)',
-          width: 800,
-          height: 400,
-          background: visual.glow,
-          filter: 'blur(120px)',
-          opacity: 0.6,
-        }}
-      />
-
-      {/* Inner card with tier-color ring (decorative) */}
-      <div
-        style={{
-          position: 'absolute',
-          top: 20,
-          left: 20,
-          right: 20,
-          bottom: 20,
-          borderRadius: 22,
-          border: `1.5px solid ${visual.accentBorder}`,
-          boxShadow: `inset 0 0 60px ${visual.accentSoft}`,
-          background: 'linear-gradient(180deg, rgba(15,23,42,0.4) 0%, rgba(2,6,23,0.6) 100%)',
-          pointerEvents: 'none',
-        }}
-      />
-
-      {/* OT badge top-right (spoiler-shown only) */}
-      {showScore && game.is_overtime && (
-        <div
-          style={{
-            position: 'absolute',
-            top: 44,
-            right: 44,
-            padding: '5px 14px',
-            borderRadius: 999,
-            background: 'rgba(167, 139, 250, 0.18)',
-            border: '1px solid rgba(167, 139, 250, 0.5)',
-            color: '#ddd6fe',
-            fontSize: 14,
-            fontWeight: 800,
-            letterSpacing: '0.18em',
-            zIndex: 2,
-          }}
-        >
-          OVERTIME
-        </div>
-      )}
-
-      {/* Main content — explicit sections, no flex-grow */}
+      {/* Inner card — solid bg-card #16163a, matches app */}
       <div
         style={{
           position: 'relative',
-          width: 1200,
-          height: 630,
-          padding: '40px 64px',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'stretch',
+          width: '100%',
+          height: '100%',
+          background: '#16163a',
+          borderRadius: 24,
+          boxShadow: `0 0 0 1.5px ${visual.accent}66, 0 4px 24px rgba(0,0,0,0.4)`,
+          overflow: 'hidden',
           boxSizing: 'border-box',
-          zIndex: 1,
         }}
       >
-        {/* Header — ~32px */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <span style={{ fontSize: 28 }}>🏀</span>
-            <span style={{ fontSize: 24, fontWeight: 700, color: '#e2e8f0', letterSpacing: '-0.01em' }}>
-              NBA Spoiler-Free
-            </span>
-          </div>
-          <span style={{ fontSize: 18, fontWeight: 500, color: '#64748b' }}>
-            {dateLabel}
-          </span>
-        </div>
-
-        {/* Teams + center column — fixed height ~280px */}
+        {/* Top accent bar — matches app's top gradient strip */}
         <div
           style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            height: 3,
+            background: visual.gradient,
+            zIndex: 2,
+          }}
+        />
+
+        {/* OT badge top-right (spoiler-shown only) */}
+        {showScore && game.is_overtime && (
+          <div
+            style={{
+              position: 'absolute',
+              top: 24,
+              right: 24,
+              padding: '5px 14px',
+              borderRadius: 999,
+              background: 'rgba(167, 139, 250, 0.18)',
+              border: '1px solid rgba(167, 139, 250, 0.5)',
+              color: '#c4b5fd',
+              fontSize: 13,
+              fontWeight: 800,
+              letterSpacing: '0.18em',
+              zIndex: 3,
+            }}
+          >
+            OT
+          </div>
+        )}
+
+        {/* Content */}
+        <div
+          style={{
+            position: 'relative',
+            width: '100%',
+            height: '100%',
+            padding: '32px 56px 28px',
             display: 'flex',
-            alignItems: 'flex-start',
-            justifyContent: 'center',
-            gap: 28,
-            marginTop: 18,
-            height: 270,
+            flexDirection: 'column',
+            boxSizing: 'border-box',
+            zIndex: 1,
           }}
         >
-          <TeamColumn abbr={game.away_team} record={game.away_record} />
+          {/* Header */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontSize: 26 }}>🏀</span>
+              <span style={{ fontSize: 22, fontWeight: 700, color: '#e2e8f0', letterSpacing: '-0.01em' }}>
+                NBA Spoiler-Free
+              </span>
+            </div>
+            <span style={{ fontSize: 16, fontWeight: 500, color: '#64748b' }}>
+              {dateLabel}
+            </span>
+          </div>
 
+          {/* Teams row + center excitement */}
           <div
             style={{
               display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'flex-start',
-              minWidth: 220,
-              paddingTop: LOGO_SIZE / 2 - 30,
-              gap: 8,
+              alignItems: 'flex-start',
+              justifyContent: 'center',
+              gap: 24,
+              marginTop: 16,
             }}
           >
-            {showScore && game.final_score ? (
+            <TeamColumn abbr={game.away_team} record={game.away_record} />
+
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'flex-start',
+                paddingTop: 10,
+                width: 200,
+              }}
+            >
+              <ExcitementCircle score={game.excitement_score} tier={tier} />
+            </div>
+
+            <TeamColumn abbr={game.home_team} record={game.home_record} />
+          </div>
+
+          {/* Final score row (spoiler-shown only) */}
+          {showScore && game.final_score && (
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: 6,
+                marginTop: 14,
+              }}
+            >
               <div
                 style={{
-                  fontSize: 64,
+                  fontSize: 40,
                   fontWeight: 900,
                   color: '#ffffff',
+                  letterSpacing: '-0.02em',
                   fontVariantNumeric: 'tabular-nums',
-                  letterSpacing: '-0.03em',
                   lineHeight: 1,
-                  whiteSpace: 'nowrap',
                 }}
               >
                 {game.final_score.replace(/\s+/g, ' ').replace(/-/g, '–')}
               </div>
-            ) : (
-              <div
-                style={{
-                  fontSize: 60,
-                  fontWeight: 800,
-                  color: '#475569',
-                  letterSpacing: '0.05em',
-                  lineHeight: 1,
-                }}
-              >
-                @
-              </div>
-            )}
-            {showScore && game.series_summary && (
-              <div
-                style={{
-                  padding: '4px 12px',
-                  borderRadius: 6,
-                  background: 'rgba(255,255,255,0.08)',
-                  color: '#e2e8f0',
-                  fontSize: 12,
-                  fontWeight: 800,
-                  letterSpacing: '0.15em',
-                  textTransform: 'uppercase',
-                }}
-              >
-                {game.series_summary}
-              </div>
-            )}
-          </div>
+              {game.series_summary && (
+                <div
+                  style={{
+                    padding: '3px 10px',
+                    borderRadius: 6,
+                    background: 'rgba(255,255,255,0.1)',
+                    color: '#cbd5e1',
+                    fontSize: 11,
+                    fontWeight: 800,
+                    letterSpacing: '0.16em',
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  {game.series_summary}
+                </div>
+              )}
+            </div>
+          )}
 
-          <TeamColumn abbr={game.home_team} record={game.home_record} />
-        </div>
-
-        {/* Tags row — ~32px */}
-        <div
-          style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 8,
-            marginTop: 14,
-            minHeight: 30,
-          }}
-        >
-          {visibleTags.map(tag => {
-            const info = getTagInfo(tag)
-            return (
-              <span
-                key={tag}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  padding: '5px 12px',
-                  borderRadius: 999,
-                  fontSize: 14,
-                  fontWeight: 600,
-                  color: info.color,
-                  background: info.bgColor,
-                  border: `1px solid ${info.color}40`,
-                }}
-              >
-                <span style={{ fontSize: 14 }}>{info.icon}</span>
-                {info.label}
-              </span>
-            )
-          })}
-        </div>
-
-        {/* Tier badge + tagline */}
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: 8,
-            marginTop: 12,
-          }}
-        >
-          <div
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 14,
-              padding: '9px 22px',
-              borderRadius: 999,
-              background: visual.gradient,
-              boxShadow: `0 8px 32px ${visual.glow}`,
-            }}
-          >
-            <span
+          {/* Tags row */}
+          {visibleTags.length > 0 && (
+            <div
               style={{
-                fontSize: 18,
-                fontWeight: 800,
-                color: '#ffffff',
-                letterSpacing: '0.18em',
+                display: 'flex',
+                flexWrap: 'wrap',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+                marginTop: showScore ? 14 : 18,
               }}
             >
-              {visual.label}
-            </span>
-            <span style={{ width: 1, height: 16, background: 'rgba(255,255,255,0.35)' }} />
-            <span
-              style={{
-                fontSize: 18,
-                fontWeight: 900,
-                color: '#ffffff',
-                fontVariantNumeric: 'tabular-nums',
-              }}
-            >
-              {game.excitement_score.toFixed(1)}/10
-            </span>
-          </div>
+              {visibleTags.map(tag => {
+                const info = getTagInfo(tag)
+                return (
+                  <span
+                    key={tag}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      padding: '5px 12px',
+                      borderRadius: 999,
+                      fontSize: 14,
+                      fontWeight: 500,
+                      color: info.color,
+                      background: info.bgColor,
+                      border: `1px solid ${info.color}30`,
+                    }}
+                  >
+                    <span style={{ fontSize: 14 }}>{info.icon}</span>
+                    {info.label}
+                  </span>
+                )
+              })}
+            </div>
+          )}
+
+          {/* Tagline */}
           <div
             style={{
               fontSize: 18,
               fontWeight: 500,
-              color: '#cbd5e1',
+              color: '#94a3b8',
               fontStyle: 'italic',
+              textAlign: 'center',
+              marginTop: 'auto',
+              marginBottom: 14,
             }}
           >
             {showScore ? '"Now you know."' : `"${visual.tagline}"`}
           </div>
-        </div>
 
-        {/* Footer row pinned to bottom: venue + URL */}
-        <div
-          style={{
-            marginTop: 'auto',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 12,
-            paddingTop: 14,
-            borderTop: '1px solid rgba(255,255,255,0.08)',
-          }}
-        >
-          <span
+          {/* Footer: venue + URL */}
+          <div
             style={{
-              display: 'inline-flex',
+              display: 'flex',
               alignItems: 'center',
-              gap: 6,
-              fontSize: 13,
-              fontWeight: 700,
-              color: '#64748b',
-              letterSpacing: '0.16em',
-              textTransform: 'uppercase',
+              justifyContent: 'space-between',
+              gap: 12,
+              paddingTop: 14,
+              borderTop: '1px solid rgba(255,255,255,0.06)',
             }}
           >
-            {game.venue_name ? (
-              <>
-                <span>📍</span>
-                <span>{game.venue_name}</span>
-              </>
-            ) : (
-              <span>{variant === 'spoiler-free' ? 'Score hidden' : 'Final shared'}</span>
-            )}
-          </span>
-          <span
-            style={{
-              fontSize: 16,
-              fontWeight: 700,
-              color: visual.accent,
-              letterSpacing: '-0.01em',
-            }}
-          >
-            nitzb.github.io/nba-spoiler-free ↗
-          </span>
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                fontSize: 12,
+                fontWeight: 700,
+                color: '#64748b',
+                letterSpacing: '0.18em',
+                textTransform: 'uppercase',
+              }}
+            >
+              {game.venue_name ? (
+                <>
+                  <span>📍</span>
+                  <span>{game.venue_name}</span>
+                </>
+              ) : (
+                <span>{variant === 'spoiler-free' ? 'Score hidden' : 'Final shared'}</span>
+              )}
+            </span>
+            <span
+              style={{
+                fontSize: 15,
+                fontWeight: 700,
+                color: visual.accent,
+                letterSpacing: '-0.01em',
+              }}
+            >
+              nitzb.github.io/nba-spoiler-free ↗
+            </span>
+          </div>
         </div>
       </div>
     </div>
