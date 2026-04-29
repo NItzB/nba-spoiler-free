@@ -79,25 +79,28 @@ function TeamColumn({ abbr, record }: { abbr: string; record?: string }) {
           flexShrink: 0,
         }}
       >
-        {/* Invisible-by-default abbr fallback — only visible if html2canvas drops the SVG */}
-        <span
-          style={{
-            position: 'absolute',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            fontSize: 56,
-            fontWeight: 900,
-            color: team.primaryColor,
-            opacity: 0.4,
-            letterSpacing: '-0.02em',
-          }}
-        >
-          {team.abbreviation}
-        </span>
-        {Logo && (
+        {Logo ? (
           <div style={{ position: 'relative', zIndex: 1, lineHeight: 0 }}>
             <Logo size={LOGO_SIZE} />
+          </div>
+        ) : (
+          <div
+            style={{
+              width: LOGO_SIZE,
+              height: LOGO_SIZE,
+              borderRadius: '50%',
+              background: `${team.primaryColor}33`,
+              border: `2px solid ${team.primaryColor}80`,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: 48,
+              fontWeight: 900,
+              color: '#ffffff',
+              letterSpacing: '-0.02em',
+            }}
+          >
+            {team.abbreviation}
           </div>
         )}
       </div>
@@ -397,16 +400,16 @@ const ShareCard = forwardRef<HTMLDivElement, ShareCardProps>(({ game, variant },
               color: '#94a3b8',
               fontStyle: 'italic',
               textAlign: 'center',
-              marginTop: 'auto',
-              marginBottom: 14,
+              marginTop: 16,
             }}
           >
             {showScore ? '"Now you know."' : `"${visual.tagline}"`}
           </div>
 
-          {/* Footer: venue + URL */}
+          {/* Footer: venue + URL — pinned to bottom */}
           <div
             style={{
+              marginTop: 'auto',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
