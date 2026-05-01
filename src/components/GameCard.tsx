@@ -393,10 +393,11 @@ export default function GameCard({ game, globalSpoilerVisible, rank, timezone }:
             <button
               onClick={() => handleShare('spoiler-shown')}
               disabled={isSharing}
+              aria-label="Share"
+              title="Share"
               className="btn-primary text-slate-200 hover:text-white bg-emerald-500/10 hover:bg-emerald-500/20 border-emerald-400/20 text-xs px-2 py-1 h-8 disabled:opacity-50"
             >
-              <span className="text-sm">📣</span>
-              <span>{isSharing ? 'Preparing…' : 'Share'}</span>
+              <span className="text-sm">{isSharing ? '…' : '📣'}</span>
             </button>
           </div>
         )}

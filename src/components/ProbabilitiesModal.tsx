@@ -117,9 +117,88 @@ function toChartColor(hex: string): string {
   return hslToHex(h, Math.max(s, 0.55), 0.6)
 }
 
+// ─── Game Flow helpers ──────────────────────────────────────────────────────
+const REG_PERIOD_SEC = 12 * 60   // 12-minute NBA quarter
+const OT_PERIOD_SEC = 5 * 60     // 5-minute overtime period
+const REG_TOTAL_SEC = 4 * REG_PERIOD_SEC
+
+function parseClock(clock?: string | null): number {
+  if (!clock) return 0
+  const parts = String(clock).split(':')
+  if (parts.length === 2) {
+    const m = parseFloat(parts[0])
+    const s = parseFloat(parts[1])
+    return (isNaN(m) ? 0 : m) * 60 + (isNaN(s) ? 0 : s)
+  }
+  const v = parseFloat(parts[0])
+  return isNaN(v) ? 0 : v
+}
+
+// Map a play to an absolute t (0..1+) along the game's timeline.
+function playT(period: number | null | undefined, clock: string | null | undefined, totalSec: number): number {
+  if (!period || totalSec <= 0) return 0
+  const isOT = period >= 5
+  const periodLen = isOT ? OT_PERIOD_SEC : REG_PERIOD_SEC
+  const remaining = parseClock(clock)
+  const elapsedInPeriod = Math.max(0, Math.min(periodLen, periodLen - remaining))
+  const elapsedTotal = period <= 4
+    ? (period - 1) * REG_PERIOD_SEC + elapsedInPeriod
+    : REG_TOTAL_SEC + (period - 5) * OT_PERIOD_SEC + elapsedInPeriod
+  return Math.max(0, Math.min(1, elapsedTotal / totalSec))
+}
+
+interface FlowPoint {
+  t: number
+  home: number
+  away: number
+  play: SlimPlay
+}
+
+function buildGameFlowSeries(plays: SlimPlay[], totalSec: number): FlowPoint[] {
+  if (plays.length === 0) return []
+  const out: FlowPoint[] = []
+  for (const p of plays) {
+    const t = playT(p.period, p.clock, totalSec)
+    const home = typeof p.homeScore === 'number' ? p.homeScore : (out.length ? out[out.length - 1].home : 0)
+    const away = typeof p.awayScore === 'number' ? p.awayScore : (out.length ? out[out.length - 1].away : 0)
+    out.push({ t, home, away, play: p })
+  }
+  return out
+}
+
+// Standard NBA "lead changes": count flips between non-tied lead states.
+function computeLeadChanges(flow: FlowPoint[]): number {
+  let prevSign = 0
+  let count = 0
+  for (const pt of flow) {
+    const diff = pt.home - pt.away
+    const sign = diff > 0 ? 1 : diff < 0 ? -1 : 0
+    if (sign !== 0 && prevSign !== 0 && sign !== prevSign) count++
+    if (sign !== 0) prevSign = sign
+  }
+  return count
+}
+
+// Find the index of the closest point to a given t. Series is sorted by t,
+// so we can early-exit once distance starts increasing.
+function closestIdxByT(series: { t: number }[], t: number): number {
+  if (series.length === 0) return -1
+  let bestIdx = 0
+  let bestDist = Math.abs(series[0].t - t)
+  for (let i = 1; i < series.length; i++) {
+    const d = Math.abs(series[i].t - t)
+    if (d < bestDist) { bestDist = d; bestIdx = i }
+    else if (d > bestDist) break
+  }
+  return bestIdx
+}
+
 export default function ProbabilitiesModal({ isOpen, onClose, game }: ProbabilitiesModalProps) {
   const [tab, setTab] = useState<Tab>('win')
-  const [hoverIdx, setHoverIdx] = useState<number | null>(null)
+  // Normalized hover position 0..1 along the chart's x-axis. Each tab maps it
+  // to its own series independently, so switching tabs while hovering still
+  // gives a consistent point in game-time.
+  const [hoverT, setHoverT] = useState<number | null>(null)
   const uid = useId().replace(/[^a-zA-Z0-9]/g, '')
 
   useEffect(() => {
@@ -137,15 +216,47 @@ export default function ProbabilitiesModal({ isOpen, onClose, game }: Probabilit
 
   const winSeries = useMemo(() => buildWinProbabilitySeries(game.winprobability_data), [game.winprobability_data])
 
+  // Slim plays in a stable, ordered array (used by Game Flow + the playsById lookup)
+  const slimPlays: SlimPlay[] = useMemo(() => {
+    if (!Array.isArray(game.plays_data)) return []
+    return game.plays_data
+      .filter(p => p?.id != null)
+      .map(p => ({ ...p, id: String(p.id) }))
+  }, [game.plays_data])
+
   const playsById = useMemo(() => {
     const m = new Map<string, SlimPlay>()
-    if (Array.isArray(game.plays_data)) {
-      for (const p of game.plays_data) {
-        if (p?.id != null) m.set(String(p.id), { ...p, id: String(p.id) })
-      }
+    for (const p of slimPlays) m.set(p.id, p)
+    return m
+  }, [slimPlays])
+
+  // How many OT periods does this game have? Drives chart x-scale.
+  const numOTs = useMemo(() => {
+    let max = 4
+    for (const p of slimPlays) {
+      if (typeof p.period === 'number' && p.period > max) max = p.period
+    }
+    return Math.max(0, max - 4)
+  }, [slimPlays])
+  const totalGameSec = REG_TOTAL_SEC + numOTs * OT_PERIOD_SEC
+
+  const flowSeries: FlowPoint[] = useMemo(
+    () => buildGameFlowSeries(slimPlays, totalGameSec),
+    [slimPlays, totalGameSec]
+  )
+
+  const leadChanges = useMemo(() => computeLeadChanges(flowSeries), [flowSeries])
+
+  // y-axis scale for Game Flow: round up to the next 25 above the max score
+  const maxScore = useMemo(() => {
+    let m = 0
+    for (const pt of flowSeries) {
+      if (pt.home > m) m = pt.home
+      if (pt.away > m) m = pt.away
     }
     return m
-  }, [game.plays_data])
+  }, [flowSeries])
+  const yMaxScore = Math.max(50, Math.ceil((maxScore + 5) / 25) * 25)
 
   // Chart geometry — must be declared before any early return so hooks order is stable.
   const W = 720
@@ -183,6 +294,49 @@ export default function ProbabilitiesModal({ isOpen, onClose, game }: Probabilit
     return `${top} L${lastX.toFixed(2)},${midY} L${firstX.toFixed(2)},${midY} Z`
   }, [winSeries, innerW, innerH, midY])
 
+  // Step-after path: hold previous y until x advances, then drop to new y.
+  // NBA scores are monotonically non-decreasing, so this reads as a staircase.
+  const buildFlowStepPath = (key: 'home' | 'away'): string => {
+    if (flowSeries.length === 0) return ''
+    let out = ''
+    let prevY = 0
+    for (let i = 0; i < flowSeries.length; i++) {
+      const p = flowSeries[i]
+      const x = p.t * innerW
+      const y = (1 - p[key] / yMaxScore) * innerH
+      if (i === 0) {
+        out = `M${x.toFixed(2)},${y.toFixed(2)}`
+      } else {
+        out += ` L${x.toFixed(2)},${prevY.toFixed(2)} L${x.toFixed(2)},${y.toFixed(2)}`
+      }
+      prevY = y
+    }
+    return out
+  }
+  const flowAwayPath = useMemo(() => buildFlowStepPath('away'), [flowSeries, innerW, innerH, yMaxScore])
+  const flowHomePath = useMemo(() => buildFlowStepPath('home'), [flowSeries, innerW, innerH, yMaxScore])
+
+  // Period boundaries on the x-axis, time-weighted (handles OT correctly).
+  const periodMarkers = useMemo(() => {
+    const markers: { label: string; centerT: number; endT: number }[] = []
+    const periods = 4 + numOTs
+    let acc = 0
+    for (let i = 1; i <= periods; i++) {
+      const isOT = i >= 5
+      const len = (isOT ? OT_PERIOD_SEC : REG_PERIOD_SEC) / totalGameSec
+      markers.push({ label: periodLabel(i).toUpperCase(), centerT: acc + len / 2, endT: acc + len })
+      acc += len
+    }
+    return markers
+  }, [numOTs, totalGameSec])
+
+  // Y-axis tick values for Game Flow (every 25 points).
+  const yTicks = useMemo(() => {
+    const ticks: number[] = []
+    for (let v = 0; v <= yMaxScore; v += 25) ticks.push(v)
+    return ticks
+  }, [yMaxScore])
+
   if (!isOpen) return null
 
   const away = getTeam(game.away_team)
@@ -192,28 +346,44 @@ export default function ProbabilitiesModal({ isOpen, onClose, game }: Probabilit
 
   const last = winSeries[winSeries.length - 1]
   const hasWinData = winSeries.length > 0
+  const hasFlowData = flowSeries.length > 0
+  const lastFlow = flowSeries[flowSeries.length - 1]
 
-  // Hovered point (or final) drives the summary % display
-  const activeIdx = hoverIdx != null && hoverIdx >= 0 && hoverIdx < winSeries.length
-    ? hoverIdx
-    : winSeries.length - 1
-  const activePoint = winSeries[activeIdx]
-  const displayAway = activePoint ? activePoint.awayPct : 50
+  // Resolve the active point in each series from the normalized hover position.
+  const winIdx = hasWinData
+    ? (hoverT == null
+        ? winSeries.length - 1
+        : Math.max(0, Math.min(winSeries.length - 1, Math.round(hoverT * (winSeries.length - 1)))))
+    : -1
+  const winPoint = winIdx >= 0 ? winSeries[winIdx] : null
+
+  const flowIdx = hasFlowData
+    ? (hoverT == null ? flowSeries.length - 1 : closestIdxByT(flowSeries, hoverT))
+    : -1
+  const flowPoint = flowIdx >= 0 ? flowSeries[flowIdx] : null
+
+  // Win-tab summary % display (driven by hover, falls back to final).
+  const displayAway = winPoint ? winPoint.awayPct : 50
   const displayHome = 100 - displayAway
 
-  // Resolve the play matching the active point (for the hover card)
-  const activePlay: SlimPlay | null = activePoint?.playId ? playsById.get(activePoint.playId) ?? null : null
+  // Resolve the play matching whichever tab the user is on.
+  const activePlay: SlimPlay | null = (() => {
+    if (tab === 'flow') return flowPoint?.play ?? null
+    if (winPoint?.playId) return playsById.get(winPoint.playId) ?? null
+    return null
+  })()
 
-  // Quarter label for the hovered position. Prefer real period from the play
-  // when we have it; fall back to a t-based estimate otherwise.
+  // Quarter label for the hovered position (used in the hint line).
   const hoveredQuarter = (() => {
-    if (hoverIdx == null || !activePoint) return null
+    if (hoverT == null) return null
     if (activePlay?.period) return periodLabel(activePlay.period)
-    const t = activePoint.t
-    if (t <= 0.25) return '1st'
-    if (t <= 0.5) return '2nd'
-    if (t <= 0.75) return '3rd'
-    if (t <= 1) return '4th'
+    if (winPoint) {
+      const t = winPoint.t
+      if (t <= 0.25) return '1st'
+      if (t <= 0.5) return '2nd'
+      if (t <= 0.75) return '3rd'
+      if (t <= 1) return '4th'
+    }
     return null
   })()
 
@@ -286,7 +456,14 @@ export default function ProbabilitiesModal({ isOpen, onClose, game }: Probabilit
             <div className="flex items-center gap-3 px-3 py-2 rounded-xl bg-white/5 border border-white/10">
               <TeamLogo abbr={game.away_team} size={36} />
               <div className="flex-1 min-w-0">
-                <p className="text-[10px] uppercase tracking-widest text-slate-500 font-bold">{away.city}</p>
+                <p className="text-[10px] uppercase tracking-widest text-slate-500 font-bold flex items-center gap-1.5">
+                  {away.city}
+                  {tab === 'flow' && (
+                    <svg width="18" height="3" viewBox="0 0 18 3" aria-hidden="true">
+                      <line x1="0" y1="1.5" x2="18" y2="1.5" stroke={awayColor} strokeWidth="2" strokeDasharray="3 2" strokeLinecap="round" />
+                    </svg>
+                  )}
+                </p>
                 <p className="text-sm font-black text-white truncate">{away.name}</p>
               </div>
               <div className="text-right">
@@ -294,15 +471,26 @@ export default function ProbabilitiesModal({ isOpen, onClose, game }: Probabilit
                   className="text-2xl font-black leading-none tabular-nums"
                   style={{ color: awayColor }}
                 >
-                  {hasWinData ? `${Math.round(displayAway)}%` : '—'}
+                  {tab === 'flow'
+                    ? (hasFlowData && flowPoint ? flowPoint.away : '—')
+                    : (hasWinData ? `${Math.round(displayAway)}%` : '—')}
                 </p>
-                <p className="text-[9px] uppercase tracking-widest text-slate-500 font-bold mt-0.5">Win</p>
+                <p className="text-[9px] uppercase tracking-widest text-slate-500 font-bold mt-0.5">
+                  {tab === 'flow' ? 'Score' : 'Win'}
+                </p>
               </div>
             </div>
             <div className="flex items-center gap-3 px-3 py-2 rounded-xl bg-white/5 border border-white/10">
               <TeamLogo abbr={game.home_team} size={36} />
               <div className="flex-1 min-w-0">
-                <p className="text-[10px] uppercase tracking-widest text-slate-500 font-bold">{home.city}</p>
+                <p className="text-[10px] uppercase tracking-widest text-slate-500 font-bold flex items-center gap-1.5">
+                  {home.city}
+                  {tab === 'flow' && (
+                    <svg width="18" height="3" viewBox="0 0 18 3" aria-hidden="true">
+                      <line x1="0" y1="1.5" x2="18" y2="1.5" stroke={homeColor} strokeWidth="2" strokeLinecap="round" />
+                    </svg>
+                  )}
+                </p>
                 <p className="text-sm font-black text-white truncate">{home.name}</p>
               </div>
               <div className="text-right">
@@ -310,19 +498,32 @@ export default function ProbabilitiesModal({ isOpen, onClose, game }: Probabilit
                   className="text-2xl font-black leading-none tabular-nums"
                   style={{ color: homeColor }}
                 >
-                  {hasWinData ? `${Math.round(displayHome)}%` : '—'}
+                  {tab === 'flow'
+                    ? (hasFlowData && flowPoint ? flowPoint.home : '—')
+                    : (hasWinData ? `${Math.round(displayHome)}%` : '—')}
                 </p>
-                <p className="text-[9px] uppercase tracking-widest text-slate-500 font-bold mt-0.5">Win</p>
+                <p className="text-[9px] uppercase tracking-widest text-slate-500 font-bold mt-0.5">
+                  {tab === 'flow' ? 'Score' : 'Win'}
+                </p>
               </div>
             </div>
           </div>
 
+          {tab === 'flow' && hasFlowData && (
+            <div className="flex justify-center -mt-1">
+              <div className="inline-flex items-center gap-2 rounded-full bg-white/5 border border-white/10 px-3 py-1">
+                <span className="text-base font-black text-white tabular-nums">{leadChanges}</span>
+                <span className="text-[10px] uppercase tracking-widest text-slate-400 font-bold">Lead Changes</span>
+              </div>
+            </div>
+          )}
+
           {/* Hover hint / quarter readout */}
-          {hasWinData && (
+          {(tab === 'win' ? hasWinData : tab === 'flow' ? hasFlowData : false) && (
             <p className="text-[10px] text-slate-500 -mt-2 px-1">
-              {hoverIdx != null && hoveredQuarter
+              {hoverT != null && hoveredQuarter
                 ? <span><span className="text-slate-300 font-bold">{hoveredQuarter}</span>{activePlay?.clock ? <> · <span className="tabular-nums">{activePlay.clock}</span></> : null} · scrubbing the chart</span>
-                : <span className="hidden sm:inline">Hover the chart to see win probability {playsById.size > 0 ? 'and play-by-play' : 'over time'}</span>}
+                : <span className="hidden sm:inline">Hover the chart to see {tab === 'flow' ? 'cumulative scores' : 'win probability'} {playsById.size > 0 ? 'and play-by-play' : 'over time'}</span>}
             </p>
           )}
 
@@ -333,19 +534,14 @@ export default function ProbabilitiesModal({ isOpen, onClose, game }: Probabilit
                 <svg
                   viewBox={`0 0 ${W} ${H}`}
                   className="w-full h-auto block touch-none select-none cursor-crosshair"
-                  onMouseLeave={() => setHoverIdx(null)}
+                  onMouseLeave={() => setHoverT(null)}
                   onMouseMove={e => {
                     const svg = e.currentTarget
                     const rect = svg.getBoundingClientRect()
                     const xVB = ((e.clientX - rect.left) / rect.width) * W
                     const xPlot = xVB - PAD_L
-                    if (xPlot < 0 || xPlot > innerW) {
-                      setHoverIdx(null)
-                      return
-                    }
-                    const t = xPlot / innerW
-                    const idx = Math.round(t * (winSeries.length - 1))
-                    setHoverIdx(Math.max(0, Math.min(winSeries.length - 1, idx)))
+                    if (xPlot < 0 || xPlot > innerW) { setHoverT(null); return }
+                    setHoverT(Math.max(0, Math.min(1, xPlot / innerW)))
                   }}
                   onTouchMove={e => {
                     const touch = e.touches[0]
@@ -354,15 +550,10 @@ export default function ProbabilitiesModal({ isOpen, onClose, game }: Probabilit
                     const rect = svg.getBoundingClientRect()
                     const xVB = ((touch.clientX - rect.left) / rect.width) * W
                     const xPlot = xVB - PAD_L
-                    if (xPlot < 0 || xPlot > innerW) {
-                      setHoverIdx(null)
-                      return
-                    }
-                    const t = xPlot / innerW
-                    const idx = Math.round(t * (winSeries.length - 1))
-                    setHoverIdx(Math.max(0, Math.min(winSeries.length - 1, idx)))
+                    if (xPlot < 0 || xPlot > innerW) { setHoverT(null); return }
+                    setHoverT(Math.max(0, Math.min(1, xPlot / innerW)))
                   }}
-                  onTouchEnd={() => setHoverIdx(null)}
+                  onTouchEnd={() => setHoverT(null)}
                 >
                   <defs>
                     {/* Clip rects are in the local coord system of the transformed plot group */}
@@ -435,7 +626,7 @@ export default function ProbabilitiesModal({ isOpen, onClose, game }: Probabilit
                       strokeLinecap="round"
                     />
                     {/* End-of-game marker (hidden while user is scrubbing) */}
-                    {last && hoverIdx == null && (
+                    {last && hoverT == null && (
                       <circle
                         cx={last.t * innerW}
                         cy={((100 - last.awayPct) / 100) * innerH}
@@ -447,11 +638,11 @@ export default function ProbabilitiesModal({ isOpen, onClose, game }: Probabilit
                     )}
 
                     {/* Hover crosshair + marker dot */}
-                    {hoverIdx != null && activePoint && (
+                    {hoverT != null && winPoint && (
                       <g pointerEvents="none">
                         <line
-                          x1={activePoint.t * innerW}
-                          x2={activePoint.t * innerW}
+                          x1={winPoint.t * innerW}
+                          x2={winPoint.t * innerW}
                           y1={0}
                           y2={innerH}
                           stroke="#ffffff"
@@ -460,10 +651,10 @@ export default function ProbabilitiesModal({ isOpen, onClose, game }: Probabilit
                           strokeDasharray="2 3"
                         />
                         <circle
-                          cx={activePoint.t * innerW}
-                          cy={((100 - activePoint.awayPct) / 100) * innerH}
+                          cx={winPoint.t * innerW}
+                          cy={((100 - winPoint.awayPct) / 100) * innerH}
                           r="4.5"
-                          fill={activePoint.awayPct >= 50 ? awayColor : homeColor}
+                          fill={winPoint.awayPct >= 50 ? awayColor : homeColor}
                           stroke="#fff"
                           strokeWidth="1.5"
                         />
@@ -492,15 +683,165 @@ export default function ProbabilitiesModal({ isOpen, onClose, game }: Probabilit
             )}
 
             {tab === 'flow' && (
-              <div className="h-48 flex flex-col items-center justify-center text-center px-4">
-                <div className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-lg mb-3">
-                  📈
+              hasFlowData ? (
+                <svg
+                  viewBox={`0 0 ${W} ${H}`}
+                  className="w-full h-auto block touch-none select-none cursor-crosshair"
+                  onMouseLeave={() => setHoverT(null)}
+                  onMouseMove={e => {
+                    const svg = e.currentTarget
+                    const rect = svg.getBoundingClientRect()
+                    const xVB = ((e.clientX - rect.left) / rect.width) * W
+                    const xPlot = xVB - PAD_L
+                    if (xPlot < 0 || xPlot > innerW) { setHoverT(null); return }
+                    setHoverT(Math.max(0, Math.min(1, xPlot / innerW)))
+                  }}
+                  onTouchMove={e => {
+                    const touch = e.touches[0]
+                    if (!touch) return
+                    const svg = e.currentTarget
+                    const rect = svg.getBoundingClientRect()
+                    const xVB = ((touch.clientX - rect.left) / rect.width) * W
+                    const xPlot = xVB - PAD_L
+                    if (xPlot < 0 || xPlot > innerW) { setHoverT(null); return }
+                    setHoverT(Math.max(0, Math.min(1, xPlot / innerW)))
+                  }}
+                  onTouchEnd={() => setHoverT(null)}
+                >
+                  {/* Y-axis labels */}
+                  <g fontFamily="Inter, system-ui, sans-serif" fontSize="9" fill="#64748b" fontWeight="700">
+                    {yTicks.map(v => {
+                      const y = PAD_T + (1 - v / yMaxScore) * innerH
+                      return (
+                        <text key={v} x={PAD_L - 6} y={y + 3} textAnchor="end">{v}</text>
+                      )
+                    })}
+                  </g>
+
+                  <g transform={`translate(${PAD_L},${PAD_T})`}>
+                    {/* Horizontal gridlines at each y-tick */}
+                    {yTicks.map(v => {
+                      const y = (1 - v / yMaxScore) * innerH
+                      return (
+                        <line
+                          key={v}
+                          x1={0}
+                          x2={innerW}
+                          y1={y}
+                          y2={y}
+                          stroke="#ffffff"
+                          strokeOpacity={v === 0 ? 0.18 : 0.06}
+                          strokeDasharray={v === 0 ? undefined : '3 3'}
+                        />
+                      )
+                    })}
+
+                    {/* Period dividers */}
+                    {periodMarkers.slice(0, -1).map((m, i) => (
+                      <line
+                        key={i}
+                        x1={m.endT * innerW}
+                        x2={m.endT * innerW}
+                        y1={0}
+                        y2={innerH}
+                        stroke="#ffffff"
+                        strokeOpacity="0.08"
+                        strokeDasharray="3 3"
+                      />
+                    ))}
+
+                    {/* Away (dashed) */}
+                    <path
+                      d={flowAwayPath}
+                      fill="none"
+                      stroke={awayColor}
+                      strokeWidth="2"
+                      strokeDasharray="5 3"
+                      strokeLinejoin="round"
+                      strokeLinecap="round"
+                    />
+                    {/* Home (solid) */}
+                    <path
+                      d={flowHomePath}
+                      fill="none"
+                      stroke={homeColor}
+                      strokeWidth="2"
+                      strokeLinejoin="round"
+                      strokeLinecap="round"
+                    />
+
+                    {/* End-of-game marker dots (hidden while scrubbing) */}
+                    {lastFlow && hoverT == null && (
+                      <g pointerEvents="none">
+                        <circle
+                          cx={lastFlow.t * innerW}
+                          cy={(1 - lastFlow.away / yMaxScore) * innerH}
+                          r="3.5"
+                          fill={awayColor}
+                          stroke="#0f172a"
+                          strokeWidth="1.5"
+                        />
+                        <circle
+                          cx={lastFlow.t * innerW}
+                          cy={(1 - lastFlow.home / yMaxScore) * innerH}
+                          r="3.5"
+                          fill={homeColor}
+                          stroke="#0f172a"
+                          strokeWidth="1.5"
+                        />
+                      </g>
+                    )}
+
+                    {/* Hover crosshair + dot markers on both lines */}
+                    {hoverT != null && flowPoint && (
+                      <g pointerEvents="none">
+                        <line
+                          x1={flowPoint.t * innerW}
+                          x2={flowPoint.t * innerW}
+                          y1={0}
+                          y2={innerH}
+                          stroke="#ffffff"
+                          strokeOpacity="0.5"
+                          strokeWidth="1"
+                          strokeDasharray="2 3"
+                        />
+                        <circle
+                          cx={flowPoint.t * innerW}
+                          cy={(1 - flowPoint.away / yMaxScore) * innerH}
+                          r="4.5"
+                          fill={awayColor}
+                          stroke="#fff"
+                          strokeWidth="1.5"
+                        />
+                        <circle
+                          cx={flowPoint.t * innerW}
+                          cy={(1 - flowPoint.home / yMaxScore) * innerH}
+                          r="4.5"
+                          fill={homeColor}
+                          stroke="#fff"
+                          strokeWidth="1.5"
+                        />
+                      </g>
+                    )}
+
+                    <g
+                      fontFamily="Inter, system-ui, sans-serif"
+                      fontSize="10"
+                      fill="#94a3b8"
+                      fontWeight="700"
+                      transform={`translate(0, ${innerH + 16})`}
+                    >
+                      {periodMarkers.map((m, i) => (
+                        <text key={i} x={m.centerT * innerW} textAnchor="middle">{m.label}</text>
+                      ))}
+                    </g>
+                  </g>
+                </svg>
+              ) : (
+                <div className="h-48 flex items-center justify-center text-xs text-slate-500">
+                  No play-by-play data available for this game.
                 </div>
-                <p className="text-sm font-bold text-slate-300">Game Flow coming soon</p>
-                <p className="text-[11px] text-slate-500 mt-1 max-w-md">
-                  Point-margin time series powered by play-by-play data. Wiring up the scraper next.
-                </p>
-              </div>
+              )
             )}
 
             {tab === 'cover' && (
@@ -517,7 +858,7 @@ export default function ProbabilitiesModal({ isOpen, onClose, game }: Probabilit
           </div>
 
           {/* Play card while scrubbing — falls back to End of Game otherwise */}
-          {tab === 'win' && hoverIdx != null && activePlay ? (
+          {(tab === 'win' || tab === 'flow') && hoverT != null && activePlay ? (
             <div className="rounded-xl bg-white/[0.03] border border-white/10 px-3 sm:px-4 py-3 animate-in fade-in duration-150">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
