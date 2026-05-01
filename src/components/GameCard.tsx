@@ -9,6 +9,7 @@ import BoxScoreModal from './BoxScoreModal'
 import VideoModal from './VideoModal'
 import ShareCard from './ShareCard'
 import ShareModal from './ShareModal'
+import ProbabilitiesModal from './ProbabilitiesModal'
 
 const SITE_URL = 'https://nitzb.github.io/nba-spoiler-free/'
 
@@ -98,6 +99,7 @@ export default function GameCard({ game, globalSpoilerVisible, rank, timezone }:
   const [localSpoilerVisible, setLocalSpoilerVisible] = useState(false)
   const [isBoxScoreOpen, setIsBoxScoreOpen] = useState(false)
   const [isVideoOpen, setIsVideoOpen] = useState(false)
+  const [isProbsOpen, setIsProbsOpen] = useState(false)
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null)
   const [shareVariant, setShareVariant] = useState<ShareVariant>('spoiler-free')
   const [isSharing, setIsSharing] = useState(false)
@@ -371,18 +373,14 @@ export default function GameCard({ game, globalSpoilerVisible, rank, timezone }:
                 <span>Watch Highlights</span>
               </a>
             )}
-            {game.full_game_url && (
-              <a
-                id={`stats-${game.id}`}
-                href={game.full_game_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn-primary text-slate-200 hover:text-white bg-slate-500/10 hover:bg-slate-500/20 border-slate-400/20 text-xs px-2 py-1 h-8"
-              >
-                <span className="text-sm">📈</span>
-                <span>Stats</span>
-              </a>
-            )}
+            <button
+              id={`probabilities-${game.id}`}
+              onClick={() => setIsProbsOpen(true)}
+              className="btn-primary text-slate-200 hover:text-white bg-slate-500/10 hover:bg-slate-500/20 border-slate-400/20 text-xs px-2 py-1 h-8"
+            >
+              <span className="text-sm">📈</span>
+              <span>Probabilities</span>
+            </button>
             {game.boxscore_data && (
               <button
                 onClick={() => setIsBoxScoreOpen(true)}
@@ -415,6 +413,12 @@ export default function GameCard({ game, globalSpoilerVisible, rank, timezone }:
           onClose={() => setIsVideoOpen(false)}
           videoId={game.recap_video_id || null}
           title={`${getTeam(game.away_team).name} @ ${getTeam(game.home_team).name} — Recap`}
+        />
+
+        <ProbabilitiesModal
+          isOpen={isProbsOpen}
+          onClose={() => setIsProbsOpen(false)}
+          game={game}
         />
 
         {isCompleted && (

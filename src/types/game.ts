@@ -24,6 +24,7 @@ export interface Game {
   home_line?: any[];
   away_line?: any[];
   winprobability_data?: any[];
+  plays_data?: any[];
   boxscore_data?: any;
   created_at?: string;
   updated_at?: string;

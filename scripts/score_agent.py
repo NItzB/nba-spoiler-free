@@ -361,17 +361,36 @@ def fetch_and_insert_for_date(target_date, recaps=None):
             # Fetch Boxscore and Probabilities
             boxscore_data = None
             winprobability_data = None
+            plays_data = None
             if game_status in ['in_progress', 'completed']:
                 game_id = event.get('id')
                 log(f"Fetching boxscore for {game_id}...")
                 boxscore_data = fetch_boxscore(game_id)
 
-                # Fetch win probability data from summary endpoint
+                # Fetch win probability + plays from the summary endpoint
                 try:
                     summary_url = f"https://site.api.espn.com/apis/site/v2/sports/basketball/nba/summary?event={game_id}"
                     summary_resp = requests.get(summary_url, timeout=10)
                     summary_data = summary_resp.json()
                     winprobability_data = summary_data.get('winprobability')
+
+                    # Slim the plays array to just the fields the chart hover card needs.
+                    # Indexed by play id so the modal can match against winprobability.playId.
+                    raw_plays = summary_data.get('plays') or []
+                    plays_data = [
+                        {
+                            "id": p.get("id"),
+                            "type": (p.get("type") or {}).get("text"),
+                            "text": p.get("text"),
+                            "clock": (p.get("clock") or {}).get("displayValue"),
+                            "period": (p.get("period") or {}).get("number"),
+                            "homeScore": p.get("homeScore"),
+                            "awayScore": p.get("awayScore"),
+                            "scoringPlay": p.get("scoringPlay"),
+                        }
+                        for p in raw_plays
+                        if p.get("id") is not None
+                    ]
                 except Exception as e:
                     log(f"Note: Could not fetch win probability for {game_id}: {e}")
 
@@ -400,6 +419,7 @@ def fetch_and_insert_for_date(target_date, recaps=None):
                 "full_game_url": full_game_url,
                 "recap_video_id": recap_video_id,
                 "winprobability_data": winprobability_data,
+                "plays_data": plays_data,
                 "boxscore_data": boxscore_data,
                 "created_at": datetime.now().isoformat(),
                 "updated_at": datetime.now().isoformat()

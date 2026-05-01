@@ -74,3 +74,10 @@ CREATE POLICY "Allow public read playoff" ON playoff_series
 
 CREATE POLICY "Allow service role write playoff" ON playoff_series
   FOR ALL USING (auth.role() = 'service_role');
+
+-- ─── Migration: plays_data ────────────────────────────────────────────────────
+-- Stores a slimmed array of plays from ESPN summary endpoint, indexed by play
+-- id, so the Probabilities modal can show "what happened" at each win-prob
+-- point as the user scrubs the chart.
+ALTER TABLE nba_daily_ranks
+  ADD COLUMN IF NOT EXISTS plays_data JSONB;

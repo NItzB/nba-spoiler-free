@@ -63,10 +63,21 @@ export default function ShareModal({ isOpen, onClose, imageDataUrl, shareText, s
         </div>
 
         <div className="p-4 sm:p-6 space-y-4">
-          {/* Preview */}
-          <div className="rounded-xl overflow-hidden border border-white/10 bg-black/20">
-            <img src={imageDataUrl} alt="Share preview" className="w-full h-auto block" />
-          </div>
+          {/* Preview — clickable, opens the site in a new tab */}
+          <a
+            href={shareUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Open NBA Spoiler-Free site"
+            className="block rounded-xl overflow-hidden border border-white/10 bg-black/20 group relative cursor-pointer"
+          >
+            <img src={imageDataUrl} alt="Share preview" className="w-full h-auto block transition-transform duration-300 group-hover:scale-[1.01]" />
+            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors duration-300 flex items-center justify-center pointer-events-none">
+              <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 px-3 py-1.5 rounded-full bg-white/95 text-slate-900 text-xs font-bold tracking-wide shadow-lg">
+                Open site ↗
+              </span>
+            </div>
+          </a>
 
           {/* Tip */}
           <p className="text-[11px] text-slate-500 leading-relaxed">
