@@ -595,7 +595,22 @@ def run():
         sys.exit(1)
 
     utc_now = datetime.now()
-    dates_to_check = [utc_now - timedelta(days=1), utc_now, utc_now + timedelta(days=1)]
+
+    # BACKFILL_DAYS=N overrides the default 3-day window and walks back N days
+    # from today (inclusive). Useful for refilling history after a schema change.
+    backfill_days_raw = os.environ.get("BACKFILL_DAYS")
+    if backfill_days_raw:
+        try:
+            n = int(backfill_days_raw)
+            if n < 1:
+                raise ValueError("BACKFILL_DAYS must be >= 1")
+            dates_to_check = [utc_now - timedelta(days=i) for i in range(n)]
+            log(f"Backfill mode: re-scraping last {n} day(s) from today.")
+        except ValueError as e:
+            log(f"Invalid BACKFILL_DAYS={backfill_days_raw!r}: {e}. Falling back to default window.")
+            dates_to_check = [utc_now - timedelta(days=1), utc_now, utc_now + timedelta(days=1)]
+    else:
+        dates_to_check = [utc_now - timedelta(days=1), utc_now, utc_now + timedelta(days=1)]
 
     recaps = fetch_motion_station_recaps()
 

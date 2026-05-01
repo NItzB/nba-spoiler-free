@@ -8,7 +8,12 @@ on:
   schedule:
     - cron: '0 6 * * *'   # 06:00 UTC = 09:00 IL
   workflow_dispatch:
-    # Allows manual triggering from the GitHub Actions tab
+    # Allows manual triggering from the GitHub Actions tab.
+    inputs:
+      backfill_days:
+        description: 'Backfill last N days (leave blank for default 3-day window)'
+        required: false
+        default: ''
 
 # Prevent overlapping runs (pg_cron has a cooldown but defense-in-depth).
 concurrency:
@@ -35,4 +40,5 @@ jobs:
       - name: Run Score Agent
         env:
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          BACKFILL_DAYS: ${{ github.event.inputs.backfill_days }}
         run: python scripts/score_agent.py
