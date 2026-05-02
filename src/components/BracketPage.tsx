@@ -11,19 +11,24 @@ interface BracketPageProps {
 
 // ─── Mini series card for bracket display ─────────────────────────────────────
 
-function MiniTeamRow({ abbr, wins, isWinner, isElim }: {
+function MiniTeamRow({ abbr, wins, isWinner, isElim, hideStats }: {
   abbr: string | null
   wins: number
   isWinner: boolean
   isElim: boolean
+  hideStats: boolean
 }) {
   const team = abbr ? getTeam(abbr) : null
   const Logo = abbr
     ? (NBAIcons as Record<string, React.ComponentType<{ size?: number }>>)[abbr]
     : null
 
+  // Suppress all win/winner signals while hidden — wins, ✓, dim losers, bold winner.
+  const showWinner = isWinner && !hideStats
+  const showElim = isElim && !hideStats
+
   return (
-    <div className={`flex items-center gap-1.5 px-2 py-1.5 ${isElim ? 'opacity-35' : ''} ${isWinner ? 'bg-white/6 rounded' : ''}`}>
+    <div className={`flex items-center gap-1.5 px-2 py-1.5 ${showElim ? 'opacity-35' : ''} ${showWinner ? 'bg-white/6 rounded' : ''}`}>
       <div className="w-5 h-5 shrink-0 flex items-center justify-center">
         {Logo
           ? <Logo size={18} />
@@ -31,14 +36,14 @@ function MiniTeamRow({ abbr, wins, isWinner, isElim }: {
         }
       </div>
       <div className="flex-1 min-w-0">
-        <p className={`text-[11px] font-bold leading-tight truncate ${isWinner ? 'text-white' : 'text-slate-300'}`}>
+        <p className={`text-[11px] font-bold leading-tight truncate ${showWinner ? 'text-white' : 'text-slate-300'}`}>
           {team ? team.name : (abbr ?? 'TBD')}
         </p>
       </div>
-      <div className={`text-sm font-black tabular-nums w-4 text-right ${isWinner ? 'text-white' : 'text-slate-500'}`}>
-        {wins}
+      <div className={`text-sm font-black tabular-nums w-4 text-right ${showWinner ? 'text-white' : 'text-slate-500'}`}>
+        {hideStats ? '–' : wins}
       </div>
-      {isWinner && <span className="text-green-400 text-[9px] font-bold">✓</span>}
+      {showWinner && <span className="text-green-400 text-[9px] font-bold">✓</span>}
     </div>
   )
 }
@@ -47,6 +52,7 @@ function BracketSeriesCard({ series, spoilersVisible }: { series: PlayoffSeries;
   const [localReveal, setLocalReveal] = React.useState(false)
   const isSpoiler = isSeriesSpoiler(series)
   const showResult = spoilersVisible || localReveal || !isSpoiler
+  const hideStats = !showResult
 
   const done = series.status === 'post'
   const t1Won = done && series.winner === series.team1
@@ -68,20 +74,24 @@ function BracketSeriesCard({ series, spoilersVisible }: { series: PlayoffSeries;
     return <span className="text-[9px] text-slate-400">{leaderTeam?.name ?? leader} {verb} {leadWins}–{trailWins}</span>
   }
 
+  // While stats are hidden, normalize the card border so a "post"-style border
+  // doesn't leak that the series ended (pre vs in vs post would otherwise differ).
+  const borderClass = hideStats
+    ? 'border-white/10 bg-bg-card'
+    : series.status === 'in'
+    ? 'border-green-500/20 bg-bg-card'
+    : done
+    ? 'border-white/10 bg-bg-card'
+    : 'border-white/5 bg-white/3'
+
   return (
-    <div className={`rounded-lg border overflow-hidden ${
-      series.status === 'in'
-        ? 'border-green-500/20 bg-bg-card'
-        : done
-        ? 'border-white/10 bg-bg-card'
-        : 'border-white/5 bg-white/3'
-    }`}>
-      <MiniTeamRow abbr={series.team1} wins={series.wins1} isWinner={t1Won} isElim={done && !t1Won} />
+    <div className={`rounded-lg border overflow-hidden ${borderClass}`}>
+      <MiniTeamRow abbr={series.team1} wins={series.wins1} isWinner={t1Won} isElim={done && !t1Won} hideStats={hideStats} />
       <div className="border-t border-white/5" />
-      <MiniTeamRow abbr={series.team2} wins={series.wins2} isWinner={t2Won} isElim={done && !t2Won} />
+      <MiniTeamRow abbr={series.team2} wins={series.wins2} isWinner={t2Won} isElim={done && !t2Won} hideStats={hideStats} />
       {series.status !== 'pre' && (
         <div className="px-2 py-1 border-t border-white/5 flex items-center gap-1.5">
-          {series.status === 'in' && <span className="w-1 h-1 rounded-full bg-green-400 animate-pulse shrink-0" />}
+          {series.status === 'in' && !hideStats && <span className="w-1 h-1 rounded-full bg-green-400 animate-pulse shrink-0" />}
           {statusLine()}
         </div>
       )}
@@ -235,7 +245,10 @@ export default function BracketPage({ spoilersVisible }: BracketPageProps) {
         <div>
           <h2 className="text-xl font-black text-white">{season} NBA Playoffs</h2>
           <p className="text-slate-500 text-sm mt-0.5">
-            Previous rounds always visible · Last night's results hidden until revealed
+            Previous rounds always visible · Recent results hidden until revealed
+          </p>
+          <p className="text-slate-600 text-[11px] mt-0.5">
+            Auto-updates within minutes after each game ends. Next round appears once ESPN publishes the matchup.
           </p>
         </div>
         {lastUpdated && (
