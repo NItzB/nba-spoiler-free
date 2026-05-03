@@ -1,4 +1,4 @@
-import { motion } from 'framer-motion'
+import { motion, type Variants } from 'framer-motion'
 import GameCard from './GameCard'
 import { Game } from '../types/game'
 
@@ -8,7 +8,9 @@ interface GameGridProps {
   timezone: string
 }
 
-const containerVariants = {
+const easeOutQuint: [number, number, number, number] = [0.22, 1, 0.36, 1]
+
+const containerVariants: Variants = {
   hidden: { opacity: 1 },
   show: {
     opacity: 1,
@@ -19,12 +21,12 @@ const containerVariants = {
   },
 }
 
-const itemVariants = {
+const itemVariants: Variants = {
   hidden: { opacity: 0, y: 16 },
   show: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] },
+    transition: { duration: 0.4, ease: easeOutQuint },
   },
 }
 

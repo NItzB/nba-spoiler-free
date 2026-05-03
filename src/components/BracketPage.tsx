@@ -1,21 +1,23 @@
 import React from 'react'
 import { formatDistanceToNow } from 'date-fns'
-import { motion } from 'framer-motion'
+import { motion, type Variants } from 'framer-motion'
 import * as NBAIcons from 'react-nba-logos'
 import { usePlayoffBracket, isSeriesSpoiler } from '../hooks/usePlayoffBracket'
 import { PlayoffSeries } from '../types/bracket'
 import { getTeam } from '../lib/teams'
 
-const cardItemVariants = {
+const easeOutQuint: [number, number, number, number] = [0.22, 1, 0.36, 1]
+
+const cardItemVariants: Variants = {
   hidden: { opacity: 0, y: 10 },
   show: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.35, ease: [0.22, 1, 0.36, 1] },
+    transition: { duration: 0.35, ease: easeOutQuint },
   },
 }
 
-const containerVariants = {
+const containerVariants: Variants = {
   hidden: { opacity: 1 },
   show: {
     opacity: 1,

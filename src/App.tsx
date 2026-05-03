@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { format } from 'date-fns'
-import { AnimatePresence, motion } from 'framer-motion'
+import { AnimatePresence, motion, type Variants } from 'framer-motion'
 import Header, { ActivePage } from './components/Header'
 import GameGrid from './components/GameGrid'
 import BracketPage from './components/BracketPage'
@@ -29,7 +29,10 @@ function getTodayIsrael(): string {
 // Tab order — used to derive slide direction for the page transition.
 const PAGE_ORDER: ActivePage[] = ['games', 'bracket']
 
-const pageVariants = {
+const easeOutQuint: [number, number, number, number] = [0.22, 1, 0.36, 1]
+const easeInQuint: [number, number, number, number] = [0.64, 0, 0.78, 0]
+
+const pageVariants: Variants = {
   enter: (dir: number) => ({
     opacity: 0,
     x: dir > 0 ? 40 : -40,
@@ -37,12 +40,12 @@ const pageVariants = {
   center: {
     opacity: 1,
     x: 0,
-    transition: { duration: 0.32, ease: [0.22, 1, 0.36, 1] },
+    transition: { duration: 0.32, ease: easeOutQuint },
   },
   exit: (dir: number) => ({
     opacity: 0,
     x: dir > 0 ? -40 : 40,
-    transition: { duration: 0.22, ease: [0.64, 0, 0.78, 0] },
+    transition: { duration: 0.22, ease: easeInQuint },
   }),
 }
 

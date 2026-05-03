@@ -10,7 +10,9 @@ interface ModalShellProps {
   /** Set true for media-heavy modals where the backdrop should feel
       cinematic (deeper blur, slightly darker). */
   cinematic?: boolean
-  children: ReactNode
+  /** Optional so callers can render `<ModalShell isOpen={false} onClose={...} />`
+      as a no-op when their content isn't ready (e.g. while data is loading). */
+  children?: ReactNode
 }
 
 /**
@@ -50,7 +52,7 @@ function ModalContent({
   onClose: () => void
   panelClassName: string
   cinematic: boolean
-  children: ReactNode
+  children?: ReactNode
 }) {
   useEffect(() => {
     document.body.style.overflow = 'hidden'
