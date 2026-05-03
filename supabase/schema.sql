@@ -87,3 +87,10 @@ ALTER TABLE nba_daily_ranks
 -- Powers the Game DNA tooltip and the 0–100 ring display.
 ALTER TABLE nba_daily_ranks
   ADD COLUMN IF NOT EXISTS nwi_breakdown JSONB;
+
+-- ─── Migration: recap_sources ────────────────────────────────────────────────
+-- Ordered array of YouTube recap sources per game. The UI tries them in order
+-- (region-aware) and falls back to the next when YouTube geo-blocks an embed.
+-- recap_video_id (singular) is kept in sync with the first entry for back-compat.
+ALTER TABLE nba_daily_ranks
+  ADD COLUMN IF NOT EXISTS recap_sources JSONB;

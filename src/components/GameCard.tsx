@@ -388,7 +388,7 @@ export default function GameCard({ game, globalSpoilerVisible, rank, timezone, f
         {/* Action buttons row */}
         {isCompleted && showScore && (
           <div className="flex items-center gap-1.5 mt-2">
-            {game.recap_video_id ? (
+            {(game.recap_sources?.length ?? 0) > 0 || game.recap_video_id ? (
               <button
                 id={`highlights-${game.id}`}
                 onClick={() => setIsVideoOpen(true)}
@@ -449,6 +449,10 @@ export default function GameCard({ game, globalSpoilerVisible, rank, timezone, f
           isOpen={isVideoOpen}
           onClose={() => setIsVideoOpen(false)}
           videoId={game.recap_video_id || null}
+          sources={game.recap_sources}
+          timezone={timezone}
+          espnHighlightsUrl={game.highlights_url}
+          searchQuery={`${getTeam(game.away_team).name} ${getTeam(game.home_team).name}`}
           title={`${getTeam(game.away_team).name} @ ${getTeam(game.home_team).name} — Recap`}
         />
 

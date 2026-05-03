@@ -10,6 +10,7 @@ export interface Game {
   highlights_url: string | null;
   full_game_url: string | null;
   recap_video_id?: string | null;
+  recap_sources?: RecapSource[] | null;
   game_time_utc: string | null;
   status?: string;
   series_summary?: string | null;
@@ -32,6 +33,14 @@ export interface Game {
 }
 
 export type ExcitementTier = 'must-watch' | 'banger' | 'great' | 'solid' | 'decent' | 'skip';
+
+// Ordered list of YouTube recap candidates, written by score_agent.py.
+// VideoModal walks them in region-aware priority order and falls back when
+// YouTube blocks an embed (geo-restriction, takedown, etc.).
+export interface RecapSource {
+  source: 'motion-station' | 'nba-official' | string;  // future-proof for more channels
+  video_id: string;
+}
 
 // Nitz Watchability Index — sub-scores all 0–100. Any sub-score may be null
 // when the underlying data wasn't available for that game.
