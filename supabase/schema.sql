@@ -81,3 +81,9 @@ CREATE POLICY "Allow service role write playoff" ON playoff_series
 -- point as the user scrubs the chart.
 ALTER TABLE nba_daily_ranks
   ADD COLUMN IF NOT EXISTS plays_data JSONB;
+
+-- ─── Migration: nwi_breakdown ─────────────────────────────────────────────────
+-- Nitz Watchability Index sub-scores (gei, hsp, cm, ofi, nwi) — all 0–100.
+-- Powers the Game DNA tooltip and the 0–100 ring display.
+ALTER TABLE nba_daily_ranks
+  ADD COLUMN IF NOT EXISTS nwi_breakdown JSONB;

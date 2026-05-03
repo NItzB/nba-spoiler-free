@@ -10,38 +10,55 @@ interface ShareCardProps {
   variant: 'spoiler-free' | 'spoiler-shown'
 }
 
-// Tier colors mirror tailwind.config.js exactly so the share card and the
-// in-app card feel like the same product.
+// Tier palette mirrors ExcitementBadge — Orange-Red / Gold / Green / Teal / Sky / Slate.
 const TIER = {
   'must-watch': {
-    label: 'Must Watch',
+    label: 'Must-Watch',
     icon: '🔥',
-    accent: '#ff6b35',
+    accent: '#f97316',
     gradFrom: '#f97316',
-    gradVia: '#ef4444',
-    gradTo: '#f97316',
+    gradVia: '#ef4444' as string | null,
+    gradTo: '#fb923c',
+    tagline: 'Drop everything.',
+  },
+  'banger': {
+    label: 'Banger',
+    icon: '🏆',
+    accent: '#fbbf24',
+    gradFrom: '#fbbf24',
+    gradVia: '#eab308' as string | null,
+    gradTo: '#fcd34d',
     tagline: "Don't miss this one.",
   },
   'great': {
     label: 'Great Game',
     icon: '⭐',
-    accent: '#4a9eff',
-    gradFrom: '#3b82f6',
+    accent: '#10b981',
+    gradFrom: '#10b981',
     gradVia: null as string | null,
-    gradTo: '#06b6d4',
+    gradTo: '#22c55e',
     tagline: 'Worth your evening.',
+  },
+  'solid': {
+    label: 'Solid',
+    icon: '💪',
+    accent: '#14b8a6',
+    gradFrom: '#14b8a6',
+    gradVia: null as string | null,
+    gradTo: '#22d3ee',
+    tagline: 'A good watch.',
   },
   'decent': {
     label: 'Decent',
     icon: '👍',
-    accent: '#a78bfa',
-    gradFrom: '#8b5cf6',
+    accent: '#0ea5e9',
+    gradFrom: '#0ea5e9',
     gradVia: null as string | null,
-    gradTo: '#a855f7',
-    tagline: 'Solid pick.',
+    gradTo: '#38bdf8',
+    tagline: 'Fine if you have time.',
   },
   'skip': {
-    label: 'Skip It',
+    label: 'Skip',
     icon: '💤',
     accent: '#64748b',
     gradFrom: '#475569',
@@ -120,13 +137,13 @@ function ScoreOrb({
         y={cy}
         textAnchor="middle"
         dominantBaseline="central"
-        fill="#ffffff"
-        fontSize="64"
+        fill={tierKey === 'banger' ? '#0f172a' : '#ffffff'}
+        fontSize="68"
         fontWeight="900"
         fontFamily={FONT_STACK}
         style={{ fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.02em' }}
       >
-        {score.toFixed(1)}
+        {Math.round(score * 10)}
       </text>
     </svg>
   )

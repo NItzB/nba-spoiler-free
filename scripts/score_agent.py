@@ -84,6 +84,265 @@ def fetch_boxscore(game_id):
         log(f"Error fetching boxscore for {game_id}: {e}")
         return None
 
+# ─── Nitz Watchability Index (NWI) ────────────────────────────────────────────
+# Weighted blend of four play-by-play metrics:
+#   GEI 40% — sum of |Δ win prob| across the game
+#   HSP 30% — % of Q4 wall-clock time within ≤5 points
+#   CM  20% — (max lead − final margin) / max lead
+#   OFI 10% — combined points vs. league-average band
+# Sub-scores are 0–100; the weighted blend is also 0–100.
+
+def _nwi_gei(winprob_data):
+    """Sum of |Δ home win pct| × 100, normalized so a typical good game ≈ 70.
+    Reference: an Inpredictable-style "ExciteIndex" of ~10 is a great game."""
+    if not isinstance(winprob_data, list) or len(winprob_data) < 2:
+        return None
+    total = 0.0
+    prev = None
+    for p in winprob_data:
+        wp = p.get("homeWinPercentage") if isinstance(p, dict) else None
+        if not isinstance(wp, (int, float)):
+            continue
+        if prev is not None:
+            total += abs(wp - prev)
+        prev = wp
+    # raw is in WP-units (0..1 each), so a sum of 6 ≈ very swingy game.
+    # Map raw 0→0, 8→100, clamp.
+    return max(0.0, min(100.0, (total / 8.0) * 100.0))
+
+
+def _parse_clock_to_sec(clock):
+    if not clock:
+        return 0.0
+    try:
+        s = str(clock)
+        if ':' in s:
+            m, sec = s.split(':', 1)
+            return float(m) * 60 + float(sec)
+        return float(s)
+    except Exception:
+        return 0.0
+
+
+def _nwi_hsp(plays_data):
+    """% of Q4 wall-clock time where |home−away| ≤ 5.
+    Walks Q4 plays in order; the gap between consecutive plays is attributed to
+    the score state at the start of the gap (the score that's currently visible
+    to the broadcast)."""
+    if not isinstance(plays_data, list) or not plays_data:
+        return None
+    q4 = [p for p in plays_data if isinstance(p, dict) and p.get("period") == 4]
+    if len(q4) < 2:
+        return None
+    Q4_LEN = 12 * 60
+    competitive = 0.0
+    for i in range(len(q4) - 1):
+        a = q4[i]
+        b = q4[i + 1]
+        a_rem = _parse_clock_to_sec(a.get("clock"))
+        b_rem = _parse_clock_to_sec(b.get("clock"))
+        # ESPN reports clock as time remaining in the period — descending.
+        gap = max(0.0, a_rem - b_rem)
+        h = a.get("homeScore")
+        aw = a.get("awayScore")
+        if isinstance(h, (int, float)) and isinstance(aw, (int, float)):
+            if abs(h - aw) <= 5:
+                competitive += gap
+    return max(0.0, min(100.0, (competitive / Q4_LEN) * 100.0))
+
+
+def _nwi_cm(plays_data, final_home, final_away):
+    """Drama signal — the larger of:
+      • comeback: max deficit the eventual winner overcame (a 20-pt comeback = 100)
+      • erosion: how much of the largest lead disappeared by the final whistle
+    Small leads get down-weighted so flat back-and-forth doesn't read as drama."""
+    if not isinstance(plays_data, list) or not plays_data:
+        return None
+    if final_home == final_away:
+        return None
+    winner_was_home = final_home > final_away
+    max_lead = 0
+    max_winner_deficit = 0
+    for p in plays_data:
+        if not isinstance(p, dict):
+            continue
+        h = p.get("homeScore")
+        a = p.get("awayScore")
+        if not (isinstance(h, (int, float)) and isinstance(a, (int, float))):
+            continue
+        d = abs(h - a)
+        if d > max_lead:
+            max_lead = d
+        deficit = (a - h) if winner_was_home else (h - a)
+        if deficit > max_winner_deficit:
+            max_winner_deficit = deficit
+    if max_lead == 0:
+        return 0.0
+    final_margin = abs(final_home - final_away)
+    comeback = max_winner_deficit / 20.0 * 100.0
+    significance = min(1.0, max_lead / 12.0)
+    erosion = (max_lead - final_margin) / max_lead * significance * 100.0
+    return max(0.0, min(100.0, max(comeback, erosion)))
+
+
+def _nwi_ofi(total_score):
+    """Combined points vs. league band: 200→0, 250→100."""
+    if total_score is None or total_score <= 0:
+        return None
+    return max(0.0, min(100.0, (total_score - 200.0) / 50.0 * 100.0))
+
+
+def _record_pct(rec):
+    if not rec or '-' not in rec:
+        return 0.5
+    try:
+        w, l = map(int, rec.split('-'))
+        return w / (w + l) if (w + l) > 0 else 0.5
+    except (ValueError, ZeroDivisionError):
+        return 0.5
+
+
+def _upset_bonus(home_score, away_score, home_record, away_record):
+    """0–10 bonus when the winner had the worse season record."""
+    h_pct = _record_pct(home_record)
+    a_pct = _record_pct(away_record)
+    if home_score > away_score:
+        gap = a_pct - h_pct
+        is_road = False
+    elif away_score > home_score:
+        gap = h_pct - a_pct
+        is_road = True
+    else:
+        return 0.0
+    if gap < 0.05:
+        return 0.0
+    raw = gap * 30.0
+    if is_road:
+        raw *= 1.5
+    return round(min(raw, 10.0), 1)
+
+
+def _star_bonus(leaders):
+    """0–10 bonus from max single-game points."""
+    if not leaders:
+        return 0
+    max_pts = 0
+    for leader in leaders:
+        if not isinstance(leader, dict):
+            continue
+        try:
+            val = leader.get('displayValue', '0')
+            if ' ' in val:
+                val = val.split()[0]
+            max_pts = max(max_pts, int(val))
+        except (ValueError, AttributeError):
+            pass
+    if max_pts >= 45: return 10
+    if max_pts >= 40: return 8
+    if max_pts >= 35: return 6
+    if max_pts >= 30: return 3
+    return 0
+
+
+def _clutch_finish_bonus(home_score, away_score):
+    """+3 if final margin ≤3, +1 if ≤5, else 0. Rewards ended-close games beyond
+    HSP's Q4 wall-clock measure — a buzzer-beater 2-pt finish is its own signal."""
+    margin = abs((home_score or 0) - (away_score or 0))
+    if margin <= 3: return 3
+    if margin <= 5: return 1
+    return 0
+
+
+def _stakes_bonus(notes, series_summary):
+    """Playoff stakes bonus inferred from ESPN's notes + series summary.
+       +7: series clincher, Game 7, or post-game 3-3 (forced G7 / elim survival).
+       +4: Game 6 (one team always faces elimination going in).
+       +2: any other playoff game.
+       0:  regular season."""
+    notes_text = " ".join(
+        n.get("headline", "") for n in (notes or []) if isinstance(n, dict)
+    ).lower()
+    series_text = (series_summary or "").lower()
+
+    is_playoff = any(k in notes_text for k in ["round", "finals", "conference"]) \
+                 or any(k in series_text for k in ["series", "tied"])
+    if not is_playoff:
+        return 0
+
+    if "wins series" in series_text or "win series" in series_text:
+        return 7
+
+    rec = re.search(r"(\d)\s*-\s*(\d)", series_text)
+    if rec:
+        a, b = int(rec.group(1)), int(rec.group(2))
+        hi, lo = max(a, b), min(a, b)
+        if hi >= 4:
+            return 7
+        if hi == 3 and lo == 3:
+            return 7
+
+    g = re.search(r"game\s+(\d)", notes_text)
+    if g:
+        gn = int(g.group(1))
+        if gn == 7:
+            return 7
+        if gn == 6:
+            return 4
+
+    return 2
+
+
+def calculate_nwi(
+    winprob_data, plays_data, home_score, away_score,
+    is_overtime=False,
+    home_record="0-0", away_record="0-0",
+    leaders=None, notes=None, series_summary=None,
+):
+    """Returns (final_score_0_100, breakdown_dict) or (None, None) if no signal.
+    final = nwi_base (weighted blend of gameplay sub-scores)
+          + ot + upset + star + stakes (narrative bonuses)
+          clamped to [0, 100]."""
+    gei = _nwi_gei(winprob_data)
+    hsp = _nwi_hsp(plays_data)
+    cm  = _nwi_cm(plays_data, home_score, away_score)
+    ofi = _nwi_ofi((home_score or 0) + (away_score or 0))
+
+    if gei is None and hsp is None and cm is None:
+        return None, None
+
+    g = gei if gei is not None else 50.0
+    h = hsp if hsp is not None else 50.0
+    c = cm  if cm  is not None else 0.0
+    o = ofi if ofi is not None else 50.0
+
+    nwi_base = g * 0.40 + h * 0.30 + c * 0.25 + o * 0.05
+
+    ot     = 5 if is_overtime else 0
+    upset  = _upset_bonus(home_score, away_score, home_record, away_record)
+    star   = _star_bonus(leaders)
+    stakes = _stakes_bonus(notes, series_summary)
+    clutch = _clutch_finish_bonus(home_score, away_score)
+
+    final = max(0.0, min(100.0, nwi_base + ot + upset + star + stakes + clutch))
+
+    breakdown = {
+        "nwi": round(final, 1),
+        "nwi_base": round(nwi_base, 1),
+        "gei": round(g, 1) if gei is not None else None,
+        "hsp": round(h, 1) if hsp is not None else None,
+        "cm":  round(c, 1) if cm  is not None else None,
+        "ofi": round(o, 1) if ofi is not None else None,
+        "bonuses": {
+            "ot": ot,
+            "upset": upset,
+            "star": star,
+            "stakes": stakes,
+            "clutch": clutch,
+        },
+    }
+    return round(final, 1), breakdown
+
+
 def calculate_excitement(home_score, away_score, is_ot, leaders=None, home_record="0-0", away_record="0-0"):
     margin = abs(home_score - away_score)
     total_score = home_score + away_score
@@ -304,8 +563,10 @@ def fetch_and_insert_for_date(target_date, recaps=None):
                 else:
                     away_team, away_score, away_record, away_leaders, away_line = team_abbr, score_val, rec_summary, pts_leader, lines
 
-            # Calculate excitement and tags
+            # Calculate excitement and tags. NWI override happens later, once
+            # winprobability + plays data are fetched from the summary endpoint.
             excitement_score = 0
+            nwi_breakdown = None
             tags = []
             final_score_str = f"{away_score}-{home_score}"
 
@@ -394,11 +655,27 @@ def fetch_and_insert_for_date(target_date, recaps=None):
                 except Exception as e:
                     log(f"Note: Could not fetch win probability for {game_id}: {e}")
 
+            # Override excitement_score with NWI when we have play-by-play signal.
+            # Only for completed games — partial NWI on a live game would mislead.
+            if game_status == 'completed':
+                nwi, breakdown = calculate_nwi(
+                    winprobability_data, plays_data, home_score, away_score,
+                    is_overtime=is_ot,
+                    home_record=home_record, away_record=away_record,
+                    leaders=all_points_leaders,
+                    notes=competition.get('notes', []),
+                    series_summary=series_summary,
+                )
+                if nwi is not None:
+                    excitement_score = round(nwi / 10.0, 1)
+                    nwi_breakdown = breakdown
+
             payload.append({
                 "date": db_date_str,
                 "home_team": home_team,
                 "away_team": away_team,
                 "excitement_score": excitement_score,
+                "nwi_breakdown": nwi_breakdown,
                 "tags": tags,
                 "final_score": final_score_str,
                 "game_time_utc": game_time_utc,

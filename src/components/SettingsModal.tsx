@@ -144,38 +144,68 @@ export default function SettingsModal({
               </p>
 
               <div className="bg-white/5 border border-white/10 rounded-lg p-4 space-y-2">
-                <p className="text-xs text-slate-400 uppercase font-bold tracking-wider">🏀 Watchability Index</p>
+                <p className="text-xs text-slate-400 uppercase font-bold tracking-wider">🏀 Nitz Watchability Index</p>
                 <p className="text-slate-300">
-                  Every game is rated on how fun it is to watch — based on how close
-                  the game was, how dramatic the finish was, the quality of the teams,
-                  and whether there was an upset.
+                  Every completed game gets a <span className="text-white font-bold">0–100 score</span> blended
+                  from four play-by-play signals — plus narrative bonuses for the moments that make a game memorable.
                 </p>
               </div>
 
+              <div className="bg-white/5 border border-white/10 rounded-lg p-4 space-y-3">
+                <p className="text-xs text-slate-400 uppercase font-bold tracking-wider">Game DNA</p>
+                <ul className="space-y-1.5 text-xs text-slate-300">
+                  <li><span className="text-white font-bold">Swing</span> <span className="text-slate-500">· 40%</span> — how much the win probability bounced around.</li>
+                  <li><span className="text-white font-bold">Clutch</span> <span className="text-slate-500">· 30%</span> — share of Q4 spent within 5 points.</li>
+                  <li><span className="text-white font-bold">Drama</span> <span className="text-slate-500">· 25%</span> — biggest comeback or lead that disappeared.</li>
+                  <li><span className="text-white font-bold">Pace</span> <span className="text-slate-500">· 5%</span> — combined scoring vs. a typical NBA game.</li>
+                </ul>
+                <p className="text-xs text-slate-400 uppercase font-bold tracking-wider pt-1">Bonuses</p>
+                <ul className="space-y-1.5 text-xs text-slate-300">
+                  <li><span className="text-white font-bold">Stakes</span> — playoff games, with G7 / clinchers / forced-G7 worth more.</li>
+                  <li><span className="text-white font-bold">Clutch finish</span> — a final margin of 5 points or fewer.</li>
+                  <li><span className="text-white font-bold">OT</span> — overtime gets a small bump.</li>
+                  <li><span className="text-white font-bold">Upset</span> — when the underdog wins (extra credit for road upsets).</li>
+                  <li><span className="text-white font-bold">Star</span> — a 30+ point individual performance.</li>
+                </ul>
+                <p className="text-[11px] text-slate-500 italic">Hover or tap a score ring to see the full breakdown for that game.</p>
+              </div>
+
               <div className="grid grid-cols-2 gap-2 text-xs">
-                <div className="bg-white/5 border border-white/10 rounded-lg p-3">
+                <div className="bg-white/5 border border-orange-400/30 rounded-lg p-3">
                   <p className="flex items-center gap-1.5 font-bold text-white">
-                    <span className="w-2 h-2 rounded-full bg-orange-500"></span> Must Watch
+                    <span className="w-2 h-2 rounded-full bg-orange-500"></span> 🔥 Must-Watch
                   </p>
-                  <p className="text-slate-400 mt-1">Instant classic — drop everything.</p>
+                  <p className="text-slate-400 mt-1">95+ — drop everything.</p>
                 </div>
                 <div className="bg-white/5 border border-white/10 rounded-lg p-3">
                   <p className="flex items-center gap-1.5 font-bold text-white">
-                    <span className="w-2 h-2 rounded-full bg-blue-400"></span> Great
+                    <span className="w-2 h-2 rounded-full bg-amber-400"></span> 🏆 Banger
                   </p>
-                  <p className="text-slate-400 mt-1">Worth your time.</p>
+                  <p className="text-slate-400 mt-1">85–94 — don't miss this one.</p>
                 </div>
                 <div className="bg-white/5 border border-white/10 rounded-lg p-3">
                   <p className="flex items-center gap-1.5 font-bold text-white">
-                    <span className="w-2 h-2 rounded-full bg-violet-400"></span> Decent
+                    <span className="w-2 h-2 rounded-full bg-emerald-500"></span> ⭐ Great Game
                   </p>
-                  <p className="text-slate-400 mt-1">Fine if you have the time.</p>
+                  <p className="text-slate-400 mt-1">70–84 — worth your evening.</p>
+                </div>
+                <div className="bg-white/5 border border-white/10 rounded-lg p-3">
+                  <p className="flex items-center gap-1.5 font-bold text-white">
+                    <span className="w-2 h-2 rounded-full bg-teal-400"></span> 💪 Solid
+                  </p>
+                  <p className="text-slate-400 mt-1">55–69 — a good watch.</p>
+                </div>
+                <div className="bg-white/5 border border-white/10 rounded-lg p-3">
+                  <p className="flex items-center gap-1.5 font-bold text-white">
+                    <span className="w-2 h-2 rounded-full bg-sky-500"></span> 👍 Decent
+                  </p>
+                  <p className="text-slate-400 mt-1">40–54 — fine if you have time.</p>
                 </div>
                 <div className="bg-white/5 border border-white/10 rounded-lg p-3 opacity-70">
                   <p className="flex items-center gap-1.5 font-bold text-white">
-                    <span className="w-2 h-2 rounded-full bg-slate-500"></span> Skip
+                    <span className="w-2 h-2 rounded-full bg-slate-500"></span> 💤 Skip
                   </p>
-                  <p className="text-slate-400 mt-1">Probably not worth it.</p>
+                  <p className="text-slate-400 mt-1">Below 40 — save the time.</p>
                 </div>
               </div>
 

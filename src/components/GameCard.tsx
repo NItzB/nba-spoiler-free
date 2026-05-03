@@ -18,10 +18,11 @@ type ShareVariant = 'spoiler-free' | 'spoiler-shown'
 function buildShareText(game: Game, variant: ShareVariant): string {
   const away = getTeam(game.away_team)
   const home = getTeam(game.home_team)
+  const score100 = Math.round(game.excitement_score * 10)
   if (variant === 'spoiler-shown' && game.final_score) {
-    return `${away.name} @ ${home.name} — ${game.final_score}. Watchability ${game.excitement_score.toFixed(1)}/10. Rated on NBA Spoiler-Free.`
+    return `${away.name} @ ${home.name} — ${game.final_score}. Watchability ${score100}/100. Rated on NBA Spoiler-Free.`
   }
-  return `${away.name} @ ${home.name} — score hidden. Watchability ${game.excitement_score.toFixed(1)}/10. Pick your watch on NBA Spoiler-Free.`
+  return `${away.name} @ ${home.name} — score hidden. Watchability ${score100}/100. Pick your watch on NBA Spoiler-Free.`
 }
 
 // Israel Standard Time / Daylight Time is UTC+2 / UTC+3
@@ -191,12 +192,16 @@ export default function GameCard({ game, globalSpoilerVisible, rank, timezone }:
         group hover:scale-[1.01] hover:shadow-card-hover
       `}
       style={{
-        boxShadow: isLive 
+        boxShadow: isLive
           ? '0 0 0 1px rgba(239,68,68,0.4), 0 4px 24px rgba(0,0,0,0.4)'
           : isMustWatch
-          ? '0 0 0 1px rgba(255,107,53,0.4), 0 4px 24px rgba(0,0,0,0.4)'
+          ? '0 0 0 1px rgba(249,115,22,0.55), 0 4px 28px rgba(0,0,0,0.4)'
+          : tier === 'banger'
+          ? '0 0 0 1px rgba(251,191,36,0.4), 0 4px 24px rgba(0,0,0,0.4)'
           : tier === 'great'
           ? '0 0 0 1px rgba(74,158,255,0.3), 0 4px 24px rgba(0,0,0,0.4)'
+          : tier === 'solid'
+          ? '0 0 0 1px rgba(20,184,166,0.3), 0 4px 24px rgba(0,0,0,0.4)'
           : '0 4px 24px rgba(0,0,0,0.4)',
       }}
     >
@@ -248,7 +253,7 @@ export default function GameCard({ game, globalSpoilerVisible, rank, timezone }:
                 UPCOMING
               </div>
             ) : (
-              <ExcitementBadge score={game.excitement_score} size="lg" />
+              <ExcitementBadge score={game.excitement_score} size="lg" breakdown={game.nwi_breakdown} />
             )}
 
             {/* Game time */}
