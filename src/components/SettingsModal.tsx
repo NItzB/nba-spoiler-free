@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { createPortal } from 'react-dom'
 import { TIMEZONES } from '../lib/timezones'
+import ModalShell from './ModalShell'
 
 interface SettingsModalProps {
   isOpen: boolean
@@ -17,8 +17,6 @@ export default function SettingsModal({
 }: SettingsModalProps) {
   const [searchTerm, setSearchTerm] = useState('')
 
-  if (!isOpen) return null
-
   const filteredTimezones = TIMEZONES.filter(tz =>
     tz.city.toLowerCase().includes(searchTerm.toLowerCase()) ||
     tz.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -26,30 +24,26 @@ export default function SettingsModal({
 
   const currentTz = TIMEZONES.find(t => t.name === timezone)
 
-  return createPortal(
-    <div className="fixed inset-0 bg-black/50 z-50 overflow-y-auto overscroll-contain" onClick={onClose}>
-      <div className="min-h-full flex items-start justify-center p-4 sm:p-6">
-        <div
-          className="bg-bg-card border border-white/10 rounded-2xl w-full max-w-2xl my-4"
-          onClick={(e) => e.stopPropagation()}
+  return (
+    <ModalShell isOpen={isOpen} onClose={onClose} panelClassName="max-w-2xl max-h-[90vh] flex flex-col">
+      {/* Header — sticky inside the scrollable area below */}
+      <div className="border-b border-white/10 px-5 py-4 flex items-center justify-between shrink-0 bg-gradient-to-b from-white/5 to-transparent">
+        <div className="min-w-0">
+          <h2 className="font-display text-xl sm:text-2xl font-extrabold text-white truncate">Settings</h2>
+          <p className="text-xs sm:text-sm text-slate-400 mt-0.5 truncate">Customize your viewing experience</p>
+        </div>
+        <button
+          onClick={onClose}
+          aria-label="Close settings"
+          className="shrink-0 ml-3 w-10 h-10 flex items-center justify-center rounded-lg bg-white/10 hover:bg-white/20 text-slate-200 hover:text-white text-lg font-bold transition-colors"
         >
-          {/* Header — sticky so ✕ is always reachable */}
-          <div className="sticky top-0 z-10 bg-bg-card border-b border-white/10 px-5 py-4 flex items-center justify-between shrink-0 rounded-t-2xl">
-            <div className="min-w-0">
-              <h2 className="text-xl sm:text-2xl font-black text-white truncate">Settings</h2>
-              <p className="text-xs sm:text-sm text-slate-400 mt-0.5 truncate">Customize your viewing experience</p>
-            </div>
-            <button
-              onClick={onClose}
-              aria-label="Close settings"
-              className="shrink-0 ml-3 w-10 h-10 flex items-center justify-center rounded-lg bg-white/10 hover:bg-white/20 text-slate-200 hover:text-white text-lg font-bold transition-colors"
-            >
-              ✕
-            </button>
-          </div>
+          ✕
+        </button>
+      </div>
 
-          {/* Content */}
-          <div className="px-5 py-5 sm:px-6 sm:py-6">
+      {/* Scrollable content */}
+      <div className="flex-1 overflow-y-auto overscroll-contain">
+        <div className="px-5 py-5 sm:px-6 sm:py-6">
             {/* Timezone Section */}
             <div className="space-y-4">
               <div>
@@ -240,13 +234,12 @@ export default function SettingsModal({
           </div>
         </div>
 
-          {/* Footer */}
-          <div className="border-t border-white/10 p-4 text-center text-xs text-slate-500 rounded-b-2xl">
-            Settings are saved automatically to your device
-          </div>
-        </div>
+      </div>{/* /flex-1 overflow-y-auto */}
+
+      {/* Footer */}
+      <div className="border-t border-white/10 p-4 text-center text-xs text-slate-500 shrink-0">
+        Settings are saved automatically to your device
       </div>
-    </div>,
-    document.body
+    </ModalShell>
   )
 }

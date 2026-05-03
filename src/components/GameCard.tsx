@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import * as NBAIcons from 'react-nba-logos'
 import { parseISO } from 'date-fns'
+import { motion } from 'framer-motion'
 import html2canvas from 'html2canvas'
 import { Game } from '../types/game'
 import { getTeam, getTagInfo } from '../lib/teams'
@@ -33,6 +34,7 @@ interface GameCardProps {
   globalSpoilerVisible: boolean
   rank: number
   timezone: string
+  featured?: boolean
 }
 
 function getLiveBadgeText(
@@ -96,7 +98,7 @@ function TeamDisplay({ abbr, side, record }: { abbr: string; side: 'home' | 'awa
   )
 }
 
-export default function GameCard({ game, globalSpoilerVisible, rank, timezone }: GameCardProps) {
+export default function GameCard({ game, globalSpoilerVisible, rank, timezone, featured = false }: GameCardProps) {
   const [localSpoilerVisible, setLocalSpoilerVisible] = useState(false)
   const [isBoxScoreOpen, setIsBoxScoreOpen] = useState(false)
   const [isVideoOpen, setIsVideoOpen] = useState(false)
@@ -107,6 +109,14 @@ export default function GameCard({ game, globalSpoilerVisible, rank, timezone }:
   const [shareImage, setShareImage] = useState<string | null>(null)
   const [shareModalOpen, setShareModalOpen] = useState(false)
   const shareCardRef = useRef<HTMLDivElement>(null)
+  // Reverb key — bumped whenever the user reveals spoilers globally. Each
+  // bump remounts the keyed glow element so its keyframes run fresh.
+  const [reverbKey, setReverbKey] = useState(0)
+  useEffect(() => {
+    const onReveal = () => setReverbKey(k => k + 1)
+    window.addEventListener('spoilers-revealed', onReveal)
+    return () => window.removeEventListener('spoilers-revealed', onReveal)
+  }, [])
   const tier = getExcitementTier(game.excitement_score)
   const tierConfig = TIER_CONFIG[tier]
   const showScore = globalSpoilerVisible || localSpoilerVisible
@@ -120,12 +130,6 @@ export default function GameCard({ game, globalSpoilerVisible, rank, timezone }:
   } catch {
     processedTags = []
   }
-
-  useEffect(() => {
-    if (game.home_team === 'NY' || game.home_team === 'SA') {
-      console.log(`[DEBUG] Game ${game.id} tags:`, game.tags);
-    }
-  }, [game]);
 
   const handleShare = async (variant: ShareVariant) => {
     if (isSharing) return
@@ -183,31 +187,58 @@ export default function GameCard({ game, globalSpoilerVisible, rank, timezone }:
   const gameTime = getGameTime(game.game_time_utc, timezone)
 
   return (
-    <div
+    <motion.div
+      whileHover={{ y: -4, scale: 1.005 }}
+      transition={{ type: 'spring', stiffness: 300, damping: 22 }}
       className={`
-        relative rounded-2xl overflow-hidden transition-all duration-300
-        animate-fade-in
-        ${isSkip ? 'opacity-60 grayscale hover:opacity-80 hover:grayscale-0' : ''}
+        relative rounded-2xl overflow-hidden glass-card h-full
+        ${isSkip ? 'opacity-60 grayscale hover:opacity-90 hover:grayscale-0 transition-[opacity,filter]' : ''}
         ${isMustWatch ? 'glow-fire' : ''}
-        group hover:scale-[1.01] hover:shadow-card-hover
+        group
       `}
       style={{
         boxShadow: isLive
-          ? '0 0 0 1px rgba(239,68,68,0.4), 0 4px 24px rgba(0,0,0,0.4)'
+          ? '0 0 0 1px rgba(239,68,68,0.4), 0 8px 32px rgba(0,0,0,0.45)'
           : isMustWatch
-          ? '0 0 0 1px rgba(249,115,22,0.55), 0 4px 28px rgba(0,0,0,0.4)'
+          ? '0 0 0 1px rgba(249,115,22,0.55), 0 12px 36px rgba(249,115,22,0.12), 0 8px 32px rgba(0,0,0,0.45)'
           : tier === 'banger'
-          ? '0 0 0 1px rgba(251,191,36,0.4), 0 4px 24px rgba(0,0,0,0.4)'
+          ? '0 0 0 1px rgba(251,191,36,0.4), 0 8px 32px rgba(0,0,0,0.45)'
           : tier === 'great'
-          ? '0 0 0 1px rgba(74,158,255,0.3), 0 4px 24px rgba(0,0,0,0.4)'
+          ? '0 0 0 1px rgba(74,158,255,0.3), 0 8px 32px rgba(0,0,0,0.45)'
           : tier === 'solid'
-          ? '0 0 0 1px rgba(20,184,166,0.3), 0 4px 24px rgba(0,0,0,0.4)'
-          : '0 4px 24px rgba(0,0,0,0.4)',
+          ? '0 0 0 1px rgba(20,184,166,0.3), 0 8px 32px rgba(0,0,0,0.45)'
+          : '0 8px 32px rgba(0,0,0,0.45)',
       }}
     >
-      {/* Background layers */}
-      <div className="absolute inset-0 bg-bg-card" />
-      <div className="absolute inset-0 shadow-inner-glow" />
+      {/* Subtle inner highlight */}
+      <div className="absolute inset-0 shadow-inner-glow pointer-events-none" />
+
+      {/* Reveal reverb — short golden ring pulse fired by the global
+          spoilers-revealed event. Each remount runs the keyframes fresh. */}
+      {reverbKey > 0 && (
+        <motion.div
+          key={reverbKey}
+          aria-hidden
+          className="absolute inset-0 rounded-2xl pointer-events-none z-20"
+          initial={{ boxShadow: '0 0 0px 0px rgba(251,146,60,0)' }}
+          animate={{
+            boxShadow: [
+              '0 0 0px 0px rgba(251,146,60,0)',
+              '0 0 26px 2px rgba(251,146,60,0.55)',
+              '0 0 0px 0px rgba(251,146,60,0)',
+            ],
+          }}
+          transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
+        />
+      )}
+
+      {/* Featured-only "TOP RATED" pip in the top-right corner. Stays out of
+          the way of the OT badge by anchoring left when isCompleted+OT. */}
+      {featured && !isLive && !isScheduled && (
+        <div className={`absolute top-3 ${game.is_overtime ? 'left-12' : 'right-3'} px-2 py-0.5 rounded-full bg-gradient-to-r from-orange-500/30 to-red-500/30 ring-1 ring-orange-400/40 text-orange-100 text-[10px] font-bold uppercase tracking-widest backdrop-blur-sm z-10`}>
+          ★ Top Rated
+        </div>
+      )}
 
       {/* Top accent bar */}
       <div
@@ -295,7 +326,7 @@ export default function GameCard({ game, globalSpoilerVisible, rank, timezone }:
                   {/* Premium Tag Tooltip (Click to Toggle) */}
                   {activeTooltip === tag && (
                     <div 
-                      className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-slate-900/95 backdrop-blur-md border border-white/10 rounded-lg shadow-2xl text-[10px] leading-relaxed text-slate-200 w-48 z-50 transform origin-bottom animate-in fade-in zoom-in-95 duration-200"
+                      className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-slate-900/95 backdrop-blur-md border border-white/10 rounded-lg shadow-2xl text-[10px] leading-relaxed text-slate-200 w-48 z-50 transform origin-bottom"
                       onClick={(e) => e.stopPropagation()}
                     >
                       <p className="font-semibold mb-0.5" style={{ color: tagInfo.color }}>
@@ -455,7 +486,7 @@ export default function GameCard({ game, globalSpoilerVisible, rank, timezone }:
 
         {/* Detailed Stats (Revealed) */}
         {showScore && (
-          <div className="mt-4 pt-4 border-t border-white/5 animate-in fade-in slide-in-from-top-2 duration-300">
+          <div className="mt-4 pt-4 border-t border-white/5">
             {/* Linescore mini-table */}
             {(game.home_line || game.away_line) && (
               <div className="mb-4 bg-white/5 rounded-lg overflow-hidden border border-white/5">
@@ -512,6 +543,6 @@ export default function GameCard({ game, globalSpoilerVisible, rank, timezone }:
           </div>
         )}
       </div>
-    </div>
+    </motion.div>
   )
 }

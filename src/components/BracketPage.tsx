@@ -1,9 +1,27 @@
 import React from 'react'
 import { formatDistanceToNow } from 'date-fns'
+import { motion } from 'framer-motion'
 import * as NBAIcons from 'react-nba-logos'
 import { usePlayoffBracket, isSeriesSpoiler } from '../hooks/usePlayoffBracket'
 import { PlayoffSeries } from '../types/bracket'
 import { getTeam } from '../lib/teams'
+
+const cardItemVariants = {
+  hidden: { opacity: 0, y: 10 },
+  show: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.35, ease: [0.22, 1, 0.36, 1] },
+  },
+}
+
+const containerVariants = {
+  hidden: { opacity: 1 },
+  show: {
+    opacity: 1,
+    transition: { staggerChildren: 0.04, delayChildren: 0.05 },
+  },
+}
 
 interface BracketPageProps {
   spoilersVisible: boolean
@@ -48,7 +66,16 @@ function MiniTeamRow({ abbr, wins, isWinner, isElim, hideStats }: {
   )
 }
 
-function BracketSeriesCard({ series, spoilersVisible }: { series: PlayoffSeries; spoilersVisible: boolean }) {
+function BracketSeriesCard({
+  series,
+  spoilersVisible,
+  emphasis = false,
+}: {
+  series: PlayoffSeries
+  spoilersVisible: boolean
+  /** Highlight as Finals — gold ring + soft glow. */
+  emphasis?: boolean
+}) {
   const [localReveal, setLocalReveal] = React.useState(false)
   const isSpoiler = isSeriesSpoiler(series)
   const showResult = spoilersVisible || localReveal || !isSpoiler
@@ -76,16 +103,24 @@ function BracketSeriesCard({ series, spoilersVisible }: { series: PlayoffSeries;
 
   // While stats are hidden, normalize the card border so a "post"-style border
   // doesn't leak that the series ended (pre vs in vs post would otherwise differ).
-  const borderClass = hideStats
-    ? 'border-white/10 bg-bg-card'
+  const borderClass = emphasis
+    ? 'border-yellow-400/40'
+    : hideStats
+    ? 'border-white/10'
     : series.status === 'in'
-    ? 'border-green-500/20 bg-bg-card'
+    ? 'border-green-500/30'
     : done
-    ? 'border-white/10 bg-bg-card'
-    : 'border-white/5 bg-white/3'
+    ? 'border-white/10'
+    : 'border-white/5'
 
   return (
-    <div className={`rounded-lg border overflow-hidden ${borderClass}`}>
+    <motion.div
+      variants={cardItemVariants}
+      whileHover={{ y: -2, scale: 1.01 }}
+      transition={{ type: 'spring', stiffness: 320, damping: 22 }}
+      className={`relative rounded-lg border overflow-hidden glass-card ${borderClass}`}
+      style={emphasis ? { boxShadow: '0 0 0 1px rgba(250,204,21,0.15), 0 8px 28px rgba(250,204,21,0.12), 0 4px 16px rgba(0,0,0,0.4)' } : undefined}
+    >
       <MiniTeamRow abbr={series.team1} wins={series.wins1} isWinner={t1Won} isElim={done && !t1Won} hideStats={hideStats} />
       <div className="border-t border-white/5" />
       <MiniTeamRow abbr={series.team2} wins={series.wins2} isWinner={t2Won} isElim={done && !t2Won} hideStats={hideStats} />
@@ -95,7 +130,7 @@ function BracketSeriesCard({ series, spoilersVisible }: { series: PlayoffSeries;
           {statusLine()}
         </div>
       )}
-    </div>
+    </motion.div>
   )
 }
 
@@ -210,7 +245,7 @@ function ConferenceBracket({
 
   return (
     <div className="flex-1 flex flex-col min-w-0">
-      <h2 className="text-[11px] font-black uppercase tracking-widest text-slate-400 text-center mb-3">
+      <h2 className="font-display text-[11px] font-extrabold uppercase tracking-widest text-slate-300 text-center mb-3">
         {title}
       </h2>
       {ordered.length === 0 ? (
@@ -243,7 +278,9 @@ export default function BracketPage({ spoilersVisible }: BracketPageProps) {
       {/* Page header */}
       <div className="flex items-center justify-between flex-wrap gap-2 mb-6">
         <div>
-          <h2 className="text-xl font-black text-white">{season} NBA Playoffs</h2>
+          <h2 className="font-display text-xl sm:text-2xl font-extrabold text-white tracking-tight">
+            {season} NBA Playoffs
+          </h2>
           <p className="text-slate-500 text-sm mt-0.5">
             Previous rounds always visible · Recent results hidden until revealed
           </p>
@@ -252,8 +289,9 @@ export default function BracketPage({ spoilersVisible }: BracketPageProps) {
           </p>
         </div>
         {lastUpdated && (
-          <span className="text-[11px] text-slate-500 flex items-center gap-1">
-            <span>🔄</span>{formatDistanceToNow(new Date(lastUpdated))} ago
+          <span className="text-[11px] text-slate-500 flex items-center gap-1.5 tabular-nums">
+            <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]" />
+            {formatDistanceToNow(new Date(lastUpdated))} ago
           </span>
         )}
       </div>
@@ -267,13 +305,27 @@ export default function BracketPage({ spoilersVisible }: BracketPageProps) {
       {loading ? (
         <BracketSkeleton />
       ) : (eastRounds.every(r => r.series.length === 0) && westRounds.every(r => r.series.length === 0) && !finals) ? (
-        <div className="text-center py-20 text-slate-500">
-          <div className="text-4xl mb-3">🏆</div>
-          <p className="text-lg font-bold text-slate-400 mb-1">Playoffs not started yet</p>
-          <p className="text-sm">The bracket will appear once playoffs begin.</p>
-        </div>
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+          className="flex flex-col items-center justify-center py-20 text-center"
+        >
+          <div className="relative mb-6">
+            <motion.div
+              aria-hidden
+              className="absolute inset-0 rounded-full"
+              style={{ background: 'radial-gradient(circle, rgba(250,204,21,0.3) 0%, rgba(250,204,21,0) 70%)', filter: 'blur(18px)' }}
+              animate={{ scale: [1, 1.18, 1], opacity: [0.6, 0.9, 0.6] }}
+              transition={{ duration: 3.6, repeat: Infinity, ease: 'easeInOut' }}
+            />
+            <div className="relative text-5xl">🏆</div>
+          </div>
+          <p className="font-display text-xl font-extrabold text-white mb-1 tracking-tight">Playoffs haven't started</p>
+          <p className="text-sm text-slate-400 max-w-sm">The bracket appears here once the postseason tips off.</p>
+        </motion.div>
       ) : (
-        <>
+        <motion.div variants={containerVariants} initial="hidden" animate="show">
           {/* ── Desktop: 7-column side-by-side bracket ── */}
           <div className="hidden lg:flex items-stretch gap-6" style={{ minHeight: 520 }}>
             {/* West: R1 → Semis → CF */}
@@ -288,12 +340,12 @@ export default function BracketPage({ spoilersVisible }: BracketPageProps) {
             <div className="flex flex-col items-center justify-center shrink-0 w-44">
               <div className="flex items-center gap-2 mb-3">
                 <div className="h-px w-6 bg-yellow-500/30" />
-                <h2 className="text-[11px] font-black uppercase tracking-widest text-yellow-400">NBA Finals</h2>
+                <h2 className="font-display text-[11px] font-extrabold uppercase tracking-widest text-yellow-400">NBA Finals</h2>
                 <div className="h-px w-6 bg-yellow-500/30" />
               </div>
               {finals
-                ? <BracketSeriesCard series={finals} spoilersVisible={spoilersVisible} />
-                : <div className="w-full rounded-lg border border-white/8 bg-white/3 p-4 text-center text-slate-600 text-xs">TBD</div>
+                ? <BracketSeriesCard series={finals} spoilersVisible={spoilersVisible} emphasis />
+                : <div className="w-full rounded-lg border border-yellow-500/15 bg-white/3 p-4 text-center text-slate-600 text-xs">TBD</div>
               }
             </div>
 
@@ -311,17 +363,17 @@ export default function BracketPage({ spoilersVisible }: BracketPageProps) {
             <MobileConference title="Western Conference" rounds={westRounds} spoilersVisible={spoilersVisible} />
             {finals && (
               <div>
-                <h2 className="text-[11px] font-black uppercase tracking-widest text-yellow-400 text-center mb-3">
+                <h2 className="font-display text-[11px] font-extrabold uppercase tracking-widest text-yellow-400 text-center mb-3">
                   🏆 NBA Finals
                 </h2>
                 <div className="max-w-xs mx-auto">
-                  <BracketSeriesCard series={finals} spoilersVisible={spoilersVisible} />
+                  <BracketSeriesCard series={finals} spoilersVisible={spoilersVisible} emphasis />
                 </div>
               </div>
             )}
             <MobileConference title="Eastern Conference" rounds={eastRounds} spoilersVisible={spoilersVisible} />
           </div>
-        </>
+        </motion.div>
       )}
     </main>
   )
@@ -336,7 +388,7 @@ function MobileConference({ title, rounds, spoilersVisible }: {
 }) {
   return (
     <div>
-      <h2 className="text-[11px] font-black uppercase tracking-widest text-slate-400 text-center mb-3">{title}</h2>
+      <h2 className="font-display text-[11px] font-extrabold uppercase tracking-widest text-slate-300 text-center mb-3">{title}</h2>
       <div className="space-y-4">
         {rounds.map(r => (
           <div key={r.round}>
@@ -357,24 +409,24 @@ function MobileConference({ title, rounds, spoilersVisible }: {
 
 function BracketSkeleton() {
   return (
-    <div className="animate-pulse flex gap-6 items-stretch" style={{ minHeight: 520 }}>
+    <div className="flex gap-6 items-stretch" style={{ minHeight: 520 }}>
       {[4, 2, 1].map(n => (
-        <div key={n} className="flex-1 flex flex-col gap-4 justify-around">
-          <div className="h-3 bg-white/5 rounded w-20 mx-auto mb-2" />
+        <div key={`l-${n}`} className="flex-1 flex flex-col gap-4 justify-around">
+          <div className="h-3 card-shimmer rounded w-20 mx-auto mb-2" />
           {Array.from({ length: n }).map((_, i) => (
-            <div key={i} className="h-20 bg-white/5 rounded-lg" />
+            <div key={i} className="h-20 rounded-lg card-shimmer glass-card border border-white/5" />
           ))}
         </div>
       ))}
       <div className="w-44 flex flex-col items-center justify-center gap-2">
-        <div className="h-3 bg-white/5 rounded w-20" />
-        <div className="h-20 bg-white/5 rounded-lg w-full" />
+        <div className="h-3 card-shimmer rounded w-20" />
+        <div className="h-20 rounded-lg card-shimmer glass-card border border-yellow-400/15 w-full" />
       </div>
       {[1, 2, 4].map(n => (
-        <div key={n} className="flex-1 flex flex-col gap-4 justify-around">
-          <div className="h-3 bg-white/5 rounded w-20 mx-auto mb-2" />
+        <div key={`r-${n}`} className="flex-1 flex flex-col gap-4 justify-around">
+          <div className="h-3 card-shimmer rounded w-20 mx-auto mb-2" />
           {Array.from({ length: n }).map((_, i) => (
-            <div key={i} className="h-20 bg-white/5 rounded-lg" />
+            <div key={i} className="h-20 rounded-lg card-shimmer glass-card border border-white/5" />
           ))}
         </div>
       ))}

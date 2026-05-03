@@ -1,8 +1,8 @@
-import React, { useEffect, useId, useMemo, useState } from 'react'
-import { createPortal } from 'react-dom'
+import React, { useId, useMemo, useState } from 'react'
 import * as NBAIcons from 'react-nba-logos'
 import { Game } from '../types/game'
 import { getTeam } from '../lib/teams'
+import ModalShell from './ModalShell'
 
 type Tab = 'win' | 'flow' | 'cover'
 
@@ -201,19 +201,6 @@ export default function ProbabilitiesModal({ isOpen, onClose, game }: Probabilit
   const [hoverT, setHoverT] = useState<number | null>(null)
   const uid = useId().replace(/[^a-zA-Z0-9]/g, '')
 
-  useEffect(() => {
-    if (!isOpen) return
-    document.body.style.overflow = 'hidden'
-    const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
-    }
-    window.addEventListener('keydown', handleEsc)
-    return () => {
-      document.body.style.overflow = 'unset'
-      window.removeEventListener('keydown', handleEsc)
-    }
-  }, [isOpen, onClose])
-
   const winSeries = useMemo(() => buildWinProbabilitySeries(game.winprobability_data), [game.winprobability_data])
 
   // Slim plays in a stable, ordered array (used by Game Flow + the playsById lookup)
@@ -337,7 +324,8 @@ export default function ProbabilitiesModal({ isOpen, onClose, game }: Probabilit
     return ticks
   }, [yMaxScore])
 
-  if (!isOpen) return null
+  // Don't bother computing chart values if the modal is closed.
+  if (!isOpen) return <ModalShell isOpen={false} onClose={onClose} />
 
   const away = getTeam(game.away_team)
   const home = getTeam(game.home_team)
@@ -402,14 +390,8 @@ export default function ProbabilitiesModal({ isOpen, onClose, game }: Probabilit
   const awayGradId = `away-grad-${uid}`
   const homeGradId = `home-grad-${uid}`
 
-  return createPortal(
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-8">
-      <div
-        className="absolute inset-0 bg-black/90 backdrop-blur-xl animate-in fade-in duration-300"
-        onClick={onClose}
-      />
-
-      <div className="relative w-full max-w-3xl bg-[#0f172a] border border-white/10 rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden ring-1 ring-white/10 animate-in zoom-in-95 duration-300">
+  return (
+    <ModalShell isOpen={isOpen} onClose={onClose} panelClassName="max-w-3xl" cinematic>
         {/* Header */}
         <div className="flex items-center justify-between px-4 sm:px-6 py-3 border-b border-white/5 bg-gradient-to-b from-white/5 to-transparent">
           <h2 className="text-[11px] sm:text-xs font-black text-white uppercase tracking-[0.18em]">
@@ -859,7 +841,7 @@ export default function ProbabilitiesModal({ isOpen, onClose, game }: Probabilit
 
           {/* Play card while scrubbing — falls back to End of Game otherwise */}
           {(tab === 'win' || tab === 'flow') && hoverT != null && activePlay ? (
-            <div className="rounded-xl bg-white/[0.03] border border-white/10 px-3 sm:px-4 py-3 animate-in fade-in duration-150">
+            <div className="rounded-xl bg-white/[0.03] border border-white/10 px-3 sm:px-4 py-3">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
                   <p className="text-xs sm:text-sm font-black text-white">
@@ -919,8 +901,6 @@ export default function ProbabilitiesModal({ isOpen, onClose, game }: Probabilit
             According to ESPN Analytics
           </p>
         </div>
-      </div>
-    </div>,
-    document.body
+    </ModalShell>
   )
 }
