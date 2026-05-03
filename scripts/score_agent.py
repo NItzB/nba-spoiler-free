@@ -439,49 +439,68 @@ def calculate_excitement(home_score, away_score, is_ot, leaders=None, home_recor
 # RSS returns the latest 15 uploads — fetched once per scraper run and reused
 # across all dates we process.
 RECAP_TITLE_RE = re.compile(r"^Game Recap:\s*(.+?)\s+(\d+),\s*(.+?)\s+(\d+)\s*$")
+# Partial form — Motion Station occasionally typos titles and drops the second
+# score (e.g. "Game Recap: Raptors 112, Cavaliers"). We still want to match
+# those as long as we can reconcile via teams + the single score we have.
+RECAP_TITLE_PARTIAL_RE = re.compile(r"^Game Recap:\s*(.+?)\s+(\d+),\s*(.+?)\s*$")
 
 def fetch_motion_station_recaps():
-    """Fetch latest videos from Motion Station and return parsed (teams,scores)→videoId.
-
-    Each entry is keyed by frozenset({team_nick_a, team_nick_b}, score_a, score_b)
-    so order doesn't matter when matching against our DB row.
-    """
+    """Fetch latest videos from Motion Station and return two lookup tables:
+      - "full":    (frozenset(teams), frozenset(scores)) → videoId
+      - "partial": (frozenset(teams), single_score)      → videoId
+    The partial table catches typo'd titles missing one score."""
+    empty = {"full": {}, "partial": {}}
     try:
         resp = requests.get(MOTION_STATION_RSS_URL, timeout=10)
         resp.raise_for_status()
         root = ET.fromstring(resp.content)
     except Exception as e:
         log(f"Motion Station RSS fetch failed: {e}")
-        return {}
+        return empty
 
     ns = {"atom": "http://www.w3.org/2005/Atom", "yt": "http://www.youtube.com/xml/schemas/2015"}
-    matches = {}
+    full = {}
+    partial = {}
     for entry in root.findall("atom:entry", ns):
         title_el = entry.find("atom:title", ns)
         vid_el = entry.find("yt:videoId", ns)
         if title_el is None or vid_el is None:
             continue
-        m = RECAP_TITLE_RE.match(title_el.text or "")
-        if not m:
+        title = title_el.text or ""
+        m = RECAP_TITLE_RE.match(title)
+        if m:
+            team_a, score_a, team_b, score_b = m.group(1).lower(), int(m.group(2)), m.group(3).lower(), int(m.group(4))
+            full[(frozenset({team_a, team_b}), frozenset({score_a, score_b}))] = vid_el.text
             continue
-        team_a, score_a, team_b, score_b = m.group(1).lower(), int(m.group(2)), m.group(3).lower(), int(m.group(4))
-        key = (frozenset({team_a, team_b}), frozenset({score_a, score_b}))
-        matches[key] = vid_el.text
-    log(f"Motion Station: parsed {len(matches)} recap videos from RSS")
-    return matches
+        mp = RECAP_TITLE_PARTIAL_RE.match(title)
+        if mp:
+            team_a, score_a, team_b = mp.group(1).lower(), int(mp.group(2)), mp.group(3).lower()
+            partial[(frozenset({team_a, team_b}), score_a)] = vid_el.text
+    log(f"Motion Station: parsed {len(full)} full + {len(partial)} partial recap videos from RSS")
+    return {"full": full, "partial": partial}
 
 def match_recap_video_id(recaps, away_abbr, home_abbr, away_score, home_score):
     away_nick = team_nickname(away_abbr)
     home_nick = team_nickname(home_abbr)
     if not away_nick or not home_nick:
         return None
-    key = (frozenset({away_nick, home_nick}), frozenset({away_score, home_score}))
-    return recaps.get(key)
+    teams = frozenset({away_nick, home_nick})
+    full = recaps.get("full", {})
+    partial = recaps.get("partial", {})
+    hit = full.get((teams, frozenset({away_score, home_score})))
+    if hit:
+        return hit
+    # Title was missing one score — match on teams + either score we know.
+    for s in (away_score, home_score):
+        hit = partial.get((teams, s))
+        if hit:
+            return hit
+    return None
 
 
 def fetch_and_insert_for_date(target_date, recaps=None):
     if recaps is None:
-        recaps = {}
+        recaps = {"full": {}, "partial": {}}
     date_str = target_date.strftime('%Y%m%d')
     db_date_str = target_date.strftime('%Y-%m-%d')
     

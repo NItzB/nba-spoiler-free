@@ -253,7 +253,7 @@ export default function GameCard({ game, globalSpoilerVisible, rank, timezone }:
                 UPCOMING
               </div>
             ) : (
-              <ExcitementBadge score={game.excitement_score} size="lg" breakdown={game.nwi_breakdown} />
+              <ExcitementBadge score={game.excitement_score} size="lg" />
             )}
 
             {/* Game time */}

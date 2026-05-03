@@ -1,10 +1,9 @@
 import { useState, useRef, useEffect } from 'react'
-import { ExcitementTier, NwiBreakdown } from '../types/game'
+import { ExcitementTier } from '../types/game'
 
 interface ExcitementBadgeProps {
   score: number                  // 0–10 (legacy column) — display is score * 10
   size?: 'sm' | 'md' | 'lg'
-  breakdown?: NwiBreakdown | null
 }
 
 // 0–10 thresholds map 1:1 to 0–100 spec tiers (95/85/70/55/40).
@@ -68,26 +67,7 @@ const SIZE_CONFIG = {
   lg: { ring: 'w-20 h-20', score: 'text-2xl', label: 'text-xs' },
 }
 
-// 0–100 → 1–5 stars, with no row dropped to zero stars (anything is at least ★).
-function starsFor(value: number): number {
-  return Math.max(1, Math.min(5, Math.round(value / 20)))
-}
-
-function StarRow({ label, value }: { label: string; value: number }) {
-  const filled = starsFor(value)
-  return (
-    <div className="flex items-center gap-2 text-[11px]">
-      <span className="text-slate-400 w-14 shrink-0">{label}</span>
-      <span className="text-amber-300 tracking-tighter">
-        {'★'.repeat(filled)}
-        <span className="text-slate-600">{'★'.repeat(5 - filled)}</span>
-      </span>
-      <span className="ml-auto text-slate-500 tabular-nums">{Math.round(value)}</span>
-    </div>
-  )
-}
-
-export default function ExcitementBadge({ score, size = 'lg', breakdown }: ExcitementBadgeProps) {
+export default function ExcitementBadge({ score, size = 'lg' }: ExcitementBadgeProps) {
   const tier = getExcitementTier(score)
   const config = TIER_CONFIG[tier]
   const sizes = SIZE_CONFIG[size]
@@ -95,19 +75,6 @@ export default function ExcitementBadge({ score, size = 'lg', breakdown }: Excit
   const wrapRef = useRef<HTMLDivElement>(null)
 
   const display = Math.round(score * 10)
-  const hasBreakdown = !!breakdown && (
-    breakdown.gei != null || breakdown.hsp != null ||
-    breakdown.cm != null || breakdown.ofi != null
-  )
-  const bonusChips: { label: string; value: number }[] = []
-  if (breakdown?.bonuses) {
-    const b = breakdown.bonuses
-    if (b.ot > 0)     bonusChips.push({ label: 'OT',     value: b.ot })
-    if (b.stakes > 0) bonusChips.push({ label: b.stakes >= 7 ? 'Stakes' : 'Playoff', value: b.stakes })
-    if (b.clutch > 0) bonusChips.push({ label: 'Clutch', value: b.clutch })
-    if (b.upset > 0)  bonusChips.push({ label: 'Upset',  value: b.upset })
-    if (b.star > 0)   bonusChips.push({ label: 'Star',   value: b.star })
-  }
 
   // Click-outside closes the tooltip on mobile / after tap.
   useEffect(() => {
@@ -120,7 +87,7 @@ export default function ExcitementBadge({ score, size = 'lg', breakdown }: Excit
     return () => document.removeEventListener('mousedown', handler)
   }, [open])
 
-  const interactive = hasBreakdown && size !== 'sm'
+  const interactive = size !== 'sm'
 
   return (
     <div
@@ -141,7 +108,7 @@ export default function ExcitementBadge({ score, size = 'lg', breakdown }: Excit
           shadow-lg
           ${interactive ? 'cursor-help' : 'cursor-default'}
         `}
-        aria-label={interactive ? 'Show Game DNA breakdown' : undefined}
+        aria-label={interactive ? 'About the Nitz Watchability Index' : undefined}
       >
         <span className={`font-black ${sizes.score} ${config.textColor} tracking-tight tabular-nums`}>
           {display}
@@ -158,38 +125,20 @@ export default function ExcitementBadge({ score, size = 'lg', breakdown }: Excit
         </span>
       )}
 
-      {interactive && open && breakdown && (
+      {interactive && open && (
         <div
-          className="absolute top-full left-1/2 -translate-x-1/2 mt-2 z-30 w-56 rounded-xl border border-white/10 bg-slate-900/95 backdrop-blur-md shadow-2xl px-3 py-2.5 animate-in fade-in zoom-in-95 duration-150"
+          className="absolute top-full left-1/2 -translate-x-1/2 mt-2 z-30 w-60 rounded-xl border border-white/10 bg-slate-900/95 backdrop-blur-md shadow-2xl px-3 py-2.5 animate-in fade-in zoom-in-95 duration-150"
           onClick={(e) => e.stopPropagation()}
         >
-          <p className="text-[9px] uppercase tracking-widest font-bold text-slate-500 mb-2">Game DNA</p>
-          <div className="space-y-1.5">
-            {breakdown.hsp != null && <StarRow label="Clutch"  value={breakdown.hsp} />}
-            {breakdown.gei != null && <StarRow label="Swing"   value={breakdown.gei} />}
-            {breakdown.cm  != null && <StarRow label="Drama"   value={breakdown.cm}  />}
-            {breakdown.ofi != null && <StarRow label="Pace"    value={breakdown.ofi} />}
-          </div>
-          {bonusChips.length > 0 && (
-            <div className="mt-2 pt-2 border-t border-white/5">
-              <p className="text-[9px] uppercase tracking-widest font-bold text-slate-500 mb-1.5">Bonuses</p>
-              <div className="flex flex-wrap gap-1">
-                {bonusChips.map(chip => (
-                  <span
-                    key={chip.label}
-                    className="inline-flex items-center gap-1 rounded-md bg-amber-400/15 ring-1 ring-amber-300/30 px-1.5 py-0.5 text-[10px] font-bold text-amber-200 tabular-nums"
-                  >
-                    {chip.label}
-                    <span className="text-amber-300">+{chip.value}</span>
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-          <div className="mt-2 pt-2 border-t border-white/5 flex items-center justify-between">
-            <span className="text-[9px] uppercase tracking-widest font-bold text-slate-500">Nitz Index</span>
-            <span className="text-[11px] font-black text-white tabular-nums">{Math.round(breakdown.nwi)}/100</span>
-          </div>
+          <p className="text-[10px] uppercase tracking-widest font-bold text-slate-400 mb-1.5">
+            🏀 Nitz Watchability Index
+          </p>
+          <p className="text-[11px] text-slate-300 leading-relaxed">
+            A 0–100 score for how watchable this game is — kept spoiler-free.
+          </p>
+          <p className="text-[10px] text-slate-500 leading-relaxed mt-2">
+            See <span className="text-slate-300 font-semibold">Settings → About</span> for the full formula.
+          </p>
           <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 rotate-45 bg-slate-900/95 border-l border-t border-white/10" />
         </div>
       )}
